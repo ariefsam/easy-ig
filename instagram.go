@@ -20,7 +20,6 @@ type Instagram struct {
 	Like             int             `json:"like"`
 	Comment          int             `json:"comment"`
 	VideoView        int             `json:"video_view"`
-	IScore           float64         `json:"iscore"`
 	TotalPost        int             `json:"total_post"`
 	AverageLike      int             `json:"average_like"`
 	AverageComment   int             `json:"average_comment"`
@@ -46,23 +45,38 @@ type InstagramPost struct {
 }
 
 func UsernameHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("request username handle")
+
 	var data Instagram
 	data.Username = _GET(r, "username")
-	log.Println(data.Username)
 	if data.Username != "" {
-		http.Get("http://ig.adpl.bz/update-ig?username=" + data.Username)
-		url := "https://adf.sgp1.digitaloceanspaces.com/ig/account/username/" + data.Username
-		log.Println(url)
-		resp, err := http.Get(url)
+		resp, err := http.Get("https://ig.adpl.bz/update-ig?username=" + data.Username)
 		if err != nil {
-			// handle error
-			log.Println(err)
+			Log(err)
+		}
+
+		url := "https://adf.sgp1.digitaloceanspaces.com/ig/account/username/" + data.Username
+		Log(url)
+		resp, err = http.Get(url)
+		if err != nil {
+			Log(err)
 		}
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		json.Unmarshal(body, &data)
 		log.Println(string(body))
 	}
+
+	d := struct {
+		Type    string
+		Request struct {
+			Username string
+		}
+		Response Instagram
+	}{
+		Type:     "ig-api-username",
+		Response: data,
+	}
+	d.Request.Username = data.Username
+	Log(d)
 	JSONView(w, r, data)
 }
