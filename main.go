@@ -14,6 +14,7 @@ func main() {
 	router = mux.NewRouter()
 
 	router.Path("/username").HandlerFunc(UsernameHandler)
+	router.Path("/post").HandlerFunc(PostHandler)
 
 	//loggedRouter := handlers.LoggingHandler(os.Stdout, r)
 	srv := &http.Server{

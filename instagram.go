@@ -80,3 +80,36 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 	Log(d)
 	JSONView(w, r, data)
 }
+
+func PostHandler(w http.ResponseWriter, r *http.Request) {
+
+	var data []InstagramPost
+	igID := _GET(r, "instagram_id")
+	if igID != "" {
+
+		url := "https://adf.sgp1.digitaloceanspaces.com/ig/account/post/" + igID
+		Log(url)
+		resp, err := http.Get(url)
+		if err != nil {
+			Log(err)
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		json.Unmarshal(body, &data)
+		log.Println(string(body))
+	}
+
+	d := struct {
+		Type    string
+		Request struct {
+			ID string
+		}
+		Response []InstagramPost
+	}{
+		Type:     "ig-api-username",
+		Response: data,
+	}
+	d.Request.ID = igID
+	Log(d)
+	JSONView(w, r, data)
+}
