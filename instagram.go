@@ -8,7 +8,7 @@ import (
 )
 
 type Instagram struct {
-	ID               string          `json:"id"`
+	InstagramID      string          `json:"instagram_id"`
 	FullName         string          `json:"full_name"`
 	Biography        string          `json:"biography"`
 	Username         string          `json:"username"`
@@ -63,6 +63,12 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		json.Unmarshal(body, &data)
+		var dataId struct {
+			ID string `json:"id"`
+		}
+		json.Unmarshal(body, &data)
+		json.Unmarshal(body, &dataId)
+		data.InstagramID = dataId.ID
 		log.Println(string(body))
 	}
 
