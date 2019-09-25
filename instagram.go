@@ -38,6 +38,7 @@ type InstagramPost struct {
 	Comment        int    `json:"comment"`
 	Like           int    `json:"like"`
 	VideoView      int    `json:"video_view"`
+	VideoURL       string `json:"video_url"`
 	Username       string `json:"username"`
 	UserID         string `json:"user_id"`
 	LastUpdate     string `json:"last_update"`
@@ -77,8 +78,8 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		Response: data,
 	}
 	d.Request.Username = data.Username
-	Log(d)
-	JSONView(w, r, data)
+	//Log(d)
+	JSONView(w, r, data, http.StatusOK)
 }
 
 func PostHandler(w http.ResponseWriter, r *http.Request) {
@@ -111,5 +112,36 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	d.Request.ID = igID
 	Log(d)
-	JSONView(w, r, data)
+	JSONView(w, r, data, http.StatusOK)
+}
+
+func GetHandler(w http.ResponseWriter, r *http.Request) {
+
+	var data InstagramPost
+	shortcode := _GET(r, "shortcode")
+	if shortcode != "" {
+		url := "https://ig.adpl.bz/update-post?shortcode=" + shortcode
+		resp, err := http.Get(url)
+		if err != nil {
+			log.Println(err)
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		json.Unmarshal(body, &data)
+		log.Println(string(body))
+	}
+
+	d := struct {
+		Type    string
+		Request struct {
+			Shortcode string
+		}
+		Response InstagramPost
+	}{
+		Type:     "ig-api-get-post",
+		Response: data,
+	}
+	d.Request.Shortcode = shortcode
+	Log(d)
+	JSONView(w, r, data, http.StatusOK)
 }
