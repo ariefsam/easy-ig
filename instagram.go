@@ -41,6 +41,7 @@ type InstagramPost struct {
 	VideoURL       string `json:"video_url"`
 	Username       string `json:"username"`
 	UserID         string `json:"user_id"`
+	ProfilePicURL  string `json:"profile_pic_url"`
 	LastUpdate     string `json:"last_update"`
 	IsVideo        bool   `json:"is_video"`
 }
