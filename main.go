@@ -11,6 +11,7 @@ import (
 var router *mux.Router
 
 func main() {
+	UploadImageFromURL("https://akcdn.detik.net.id/community/media/visual/2018/04/09/8d567bcc-1116-4416-a83f-c73915302a18.jpeg?w=780&q=90", "/img/test")
 	router = mux.NewRouter()
 
 	router.Path("/username").HandlerFunc(UsernameHandler)

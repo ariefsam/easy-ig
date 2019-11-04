@@ -5,28 +5,31 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+
+	"github.com/getsentry/sentry-go"
 )
 
 type Instagram struct {
-	ID               string          `json:"id"`
-	FullName         string          `json:"full_name"`
-	Biography        string          `json:"biography"`
-	Username         string          `json:"username"`
-	IsPrivate        bool            `json:"is_private"`
-	IsVerified       bool            `json:"is_verified"`
-	ProfilePicUrl    string          `json:"profile_pic_url"`
-	Following        int             `json:"following"`
-	Follower         int             `json:"follower"`
-	Like             int             `json:"like"`
-	Comment          int             `json:"comment"`
-	VideoView        int             `json:"video_view"`
-	TotalPost        int             `json:"total_post"`
-	AverageLike      int             `json:"average_like"`
-	AverageComment   int             `json:"average_comment"`
-	AverageVideoView int             `json:"average_video_view"`
-	LastUpdate       string          `json:"last_update"`
-	LastUpdateStatus string          `json:"last_update_status"`
-	LastPost         []InstagramPost `json:"last_post"`
+	ID                  string          `json:"id"`
+	FullName            string          `json:"full_name"`
+	Biography           string          `json:"biography"`
+	Username            string          `json:"username"`
+	IsPrivate           bool            `json:"is_private"`
+	IsVerified          bool            `json:"is_verified"`
+	ProfilePicUrl       string          `json:"profile_pic_url"`
+	StoredProfilePicUrl string          `json:"stored_profile_pic_url"`
+	Following           int             `json:"following"`
+	Follower            int             `json:"follower"`
+	Like                int             `json:"like"`
+	Comment             int             `json:"comment"`
+	VideoView           int             `json:"video_view"`
+	TotalPost           int             `json:"total_post"`
+	AverageLike         int             `json:"average_like"`
+	AverageComment      int             `json:"average_comment"`
+	AverageVideoView    int             `json:"average_video_view"`
+	LastUpdate          string          `json:"last_update"`
+	LastUpdateStatus    string          `json:"last_update_status"`
+	LastPost            []InstagramPost `json:"last_post"`
 }
 
 type InstagramPost struct {
@@ -50,36 +53,30 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 
 	var data Instagram
 	data.Username = _GET(r, "username")
+	if data.Username == "" {
+		JSONView(w, r, nil, http.StatusBadRequest)
+		return
+	}
 	if data.Username != "" {
 		resp, err := http.Get("https://ig.adpl.bz/update-ig?username=" + data.Username)
 		if err != nil {
-			Log(err)
+			sentry.CaptureException(err)
 		}
 
 		url := "https://adf.sgp1.digitaloceanspaces.com/ig/account/username/" + data.Username
-		Log(url)
+
 		resp, err = http.Get(url)
 		if err != nil {
-			Log(err)
+			sentry.CaptureException(err)
 		}
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		json.Unmarshal(body, &data)
-		log.Println(string(body))
+
+		data.StoreProfilePic()
+
 	}
 
-	d := struct {
-		Type    string
-		Request struct {
-			Username string
-		}
-		Response Instagram
-	}{
-		Type:     "ig-api-username",
-		Response: data,
-	}
-	d.Request.Username = data.Username
-	//Log(d)
 	JSONView(w, r, data, http.StatusOK)
 }
 
@@ -90,15 +87,13 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	if igID != "" {
 
 		url := "https://adf.sgp1.digitaloceanspaces.com/ig/account/post/" + igID
-		Log(url)
 		resp, err := http.Get(url)
 		if err != nil {
-			Log(err)
+			sentry.CaptureException(err)
 		}
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		json.Unmarshal(body, &data)
-		log.Println(string(body))
 	}
 
 	d := struct {
@@ -112,7 +107,7 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		Response: data,
 	}
 	d.Request.ID = igID
-	Log(d)
+	//Log(d)
 	JSONView(w, r, data, http.StatusOK)
 }
 
