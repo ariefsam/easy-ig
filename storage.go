@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"instagram-crawler/customlog"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -42,7 +41,6 @@ func Put(data string, path string) error {
 		ACL:         aws.String("public-read"),
 	})
 	if err != nil {
-		customlog.Log(err)
 		return fmt.Errorf("failed to upload file, %v", err)
 	}
 	fmt.Printf("file uploaded to, %s\n", aws.StringValue(&result.Location))
