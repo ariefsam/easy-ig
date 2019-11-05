@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"github.com/getsentry/sentry-go"
@@ -33,20 +32,21 @@ type Instagram struct {
 }
 
 type InstagramPost struct {
-	ID             string `json:"id"`
-	TimestampTaken int    `json:"timestamp_taken"`
-	Shortcode      string `json:"shortcode"`
-	Caption        string `json:"caption"`
-	DisplayURL     string `json:"display_url"`
-	Comment        int    `json:"comment"`
-	Like           int    `json:"like"`
-	VideoView      int    `json:"video_view"`
-	VideoURL       string `json:"video_url"`
-	Username       string `json:"username"`
-	UserID         string `json:"user_id"`
-	ProfilePicURL  string `json:"profile_pic_url"`
-	LastUpdate     string `json:"last_update"`
-	IsVideo        bool   `json:"is_video"`
+	ID               string `json:"id"`
+	TimestampTaken   int    `json:"timestamp_taken"`
+	Shortcode        string `json:"shortcode"`
+	Caption          string `json:"caption"`
+	DisplayURL       string `json:"display_url"`
+	Comment          int    `json:"comment"`
+	Like             int    `json:"like"`
+	VideoView        int    `json:"video_view"`
+	VideoURL         string `json:"video_url"`
+	Username         string `json:"username"`
+	UserID           string `json:"user_id"`
+	ProfilePicURL    string `json:"profile_pic_url"`
+	LastUpdate       string `json:"last_update"`
+	IsVideo          bool   `json:"is_video"`
+	StoredDisplayURL string `json:"store_display_url"`
 }
 
 func UsernameHandler(w http.ResponseWriter, r *http.Request) {
@@ -111,22 +111,30 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 	JSONView(w, r, data, http.StatusOK)
 }
 
-func GetHandler(w http.ResponseWriter, r *http.Request) {
+func GetPostHandler(w http.ResponseWriter, r *http.Request) {
 
 	var data InstagramPost
 	shortcode := _GET(r, "shortcode")
-	if shortcode != "" {
-		url := "https://ig.adpl.bz/update-post?shortcode=" + shortcode
-		resp, err := http.Get(url)
-		if err != nil {
-			log.Println(err)
-		}
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		json.Unmarshal(body, &data)
-		log.Println(string(body))
+
+	if len(shortcode) < 5 {
+		return
 	}
 
+	url := "https://ig.adpl.bz/update-post?shortcode=" + shortcode
+	resp, err := http.Get(url)
+	if err != nil {
+		sentry.CaptureException(err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	json.Unmarshal(body, &data)
+
+	if data.ID != "" {
+		storeImage := _GET(r, "store_image")
+		if storeImage == "1" {
+			data.StoreDisplayURL()
+		}
+	}
 	d := struct {
 		Type    string
 		Request struct {
@@ -138,6 +146,21 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 		Response: data,
 	}
 	d.Request.Shortcode = shortcode
-	Log(d)
 	JSONView(w, r, data, http.StatusOK)
+}
+
+func GetImageFromURL(url string) (img []byte, err error) {
+	response, err := http.Get(url)
+	if err != nil {
+		return
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return
+	}
+
+	response.Body.Close()
+	img = body
+	return
 }
