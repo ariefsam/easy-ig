@@ -111,6 +111,10 @@ func UploadImageFromURL(url, path string) (location string, err error) {
 		return
 	}
 
+	if response.StatusCode != 200 {
+		err = fmt.Errorf("Image not found")
+		return
+	}
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return
