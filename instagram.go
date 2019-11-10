@@ -73,7 +73,12 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(resp.Body)
 		json.Unmarshal(body, &data)
 
-		data.StoreProfilePic()
+		if data.ID != "" {
+			data.StoreProfilePic()
+			// data.CheckVision()
+			// data.Save()
+			// data.SavePost()
+		}
 
 	}
 

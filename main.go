@@ -12,7 +12,8 @@ var router *mux.Router
 
 func main() {
 	//os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "Easy Insta-29794461bb65.json")
-	detectLandmarks()
+	//detectLandmarks()
+	Vision("https://abcd.sgp1.cdn.digitaloceanspaces.com/insta/post-image/2139776884387446426")
 	router = mux.NewRouter()
 
 	router.Path("/username").HandlerFunc(UsernameHandler)
