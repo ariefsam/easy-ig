@@ -18,7 +18,7 @@ func main() {
 
 	router.Path("/username").HandlerFunc(UsernameHandler)
 	router.Path("/post").HandlerFunc(PostHandler)
-	router.Path("/get-post").HandlerFunc(GetPostHandler)
+	router.Path("/get-post").HandlerFunc(UpdatePostHandler)
 	router.Use(rapidApiMiddleware)
 
 	//loggedRouter := handlers.LoggingHandler(os.Stdout, r)
