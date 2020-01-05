@@ -26,8 +26,8 @@ func main() {
 		Handler: router,
 		Addr:    ":" + config.Port,
 		// Good practice: enforce timeouts for servers you create!
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 50 * time.Second,
+		ReadTimeout:  50 * time.Second,
 	}
 
 	log.Fatal(srv.ListenAndServe())

@@ -22,8 +22,6 @@ func init() {
 	endpoint = config.Space.Endpoint
 	region = config.Space.Region
 	bucket = config.Space.Bucket
-	// os.Setenv("AWS_ACCESS_KEY_ID", "QXFURGCA4RFCTEOOVGYW")
-	// os.Setenv("AWS_SECRET_ACCESS_KEY", "69cd95ffa3ce3b8f2b0f13a9b1f2da84141754570c7470555f00f2c71b6f69cf")
 	sess = session.Must(session.NewSession(&aws.Config{
 		Endpoint: &endpoint,
 		Region:   &region,

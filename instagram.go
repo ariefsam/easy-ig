@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 
 	"github.com/getsentry/sentry-go"
@@ -32,21 +33,22 @@ type Instagram struct {
 }
 
 type InstagramPost struct {
-	ID               string `json:"id"`
-	TimestampTaken   int    `json:"timestamp_taken"`
-	Shortcode        string `json:"shortcode"`
-	Caption          string `json:"caption"`
-	DisplayURL       string `json:"display_url"`
-	Comment          int    `json:"comment"`
-	Like             int    `json:"like"`
-	VideoView        int    `json:"video_view"`
-	VideoURL         string `json:"video_url"`
-	Username         string `json:"username"`
-	UserID           string `json:"user_id"`
-	ProfilePicURL    string `json:"profile_pic_url"`
-	LastUpdate       string `json:"last_update"`
-	IsVideo          bool   `json:"is_video"`
-	StoredDisplayURL string `json:"store_display_url"`
+	ID               string   `json:"id"`
+	TimestampTaken   int      `json:"timestamp_taken"`
+	Shortcode        string   `json:"shortcode"`
+	Caption          string   `json:"caption"`
+	DisplayURL       string   `json:"display_url"`
+	Comment          int      `json:"comment"`
+	Like             int      `json:"like"`
+	VideoView        int      `json:"video_view"`
+	VideoURL         string   `json:"video_url"`
+	Username         string   `json:"username"`
+	UserID           string   `json:"user_id"`
+	ProfilePicURL    string   `json:"profile_pic_url"`
+	LastUpdate       string   `json:"last_update"`
+	IsVideo          bool     `json:"is_video"`
+	StoredDisplayURL string   `json:"store_display_url"`
+	AICategory       []string `json:"ai_category"`
 }
 
 func UsernameHandler(w http.ResponseWriter, r *http.Request) {
@@ -76,12 +78,14 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		if data.ID != "" {
 			data.StoreProfilePic()
 			data.CheckVision()
-			//data.Save()
-			//data.SavePost()
+			go func() {
+				data.Save()
+				data.SavePost()
+			}()
 		}
 
 	}
-
+	log.Println("giving response ")
 	JSONView(w, r, data, http.StatusOK)
 }
 
