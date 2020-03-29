@@ -3,10 +3,11 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
+	"net/url"
 
 	"github.com/getsentry/sentry-go"
+	"gitlab.com/ariefhidayatulloh/golang-package/instagram"
 )
 
 type Instagram struct {
@@ -60,33 +61,17 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if data.Username != "" {
-		resp, err := http.Get("https://ig.adpl.bz/update-ig?username=" + data.Username)
+		myClient := &http.Client{}
+		proxyUrl, _ := url.Parse("http://lum-customer-hl_52c756b8-zone-zone1:cjajlzx3q8wk@zproxy.luminati.io:22225")
+		myClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
+
+		profile, err := instagram.GetProfile(data.Username, myClient)
 		if err != nil {
 			sentry.CaptureException(err)
 		}
-
-		url := "https://adf.sgp1.digitaloceanspaces.com/ig/account/username/" + data.Username
-
-		resp, err = http.Get(url)
-		if err != nil {
-			sentry.CaptureException(err)
-		}
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		json.Unmarshal(body, &data)
-
-		if data.ID != "" {
-			data.StoreProfilePic()
-			data.CheckVision()
-			go func() {
-				data.Save()
-				data.SavePost()
-			}()
-		}
-
+		JSONView(w, r, profile, 200)
 	}
-	log.Println("giving response ")
-	JSONView(w, r, data, http.StatusOK)
+	JSONView(w, r, "", 200)
 }
 
 func PostHandler(w http.ResponseWriter, r *http.Request) {
