@@ -70,6 +70,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 			sentry.CaptureException(err)
 		}
 		JSONView(w, r, profile, 200)
+		return
 	}
 	JSONView(w, r, "", 200)
 }
