@@ -66,8 +66,17 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		myClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
 
 		profile, err := instagram.GetProfile(data.Username, myClient)
+
 		if err != nil {
 			sentry.CaptureException(err)
+		}
+		var try int
+		for profile.FullName == "" {
+			if try > 10 {
+				break
+			}
+			profile, _ = instagram.GetProfile(data.Username, myClient)
+			try++
 		}
 		JSONView(w, r, profile, 200)
 		return

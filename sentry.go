@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/getsentry/sentry-go"
 )
 
@@ -13,6 +15,7 @@ func init() {
 
 func SentryCaptureException(err error) {
 	if err != nil {
+		log.Println(err)
 		sentry.CaptureException(err)
 	}
 }
