@@ -63,6 +63,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 	if data.Username != "" {
 		myClient := &http.Client{}
 		proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone3:zfbvdqv0nsj4@zproxy.lum-superproxy.io:22225")
+		// proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone5:fmljzy13ygqd@zproxy.lum-superproxy.io:22225")
 		myClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
 
 		profile, err := instagram.GetProfile(data.Username, myClient)
