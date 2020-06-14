@@ -105,18 +105,19 @@ func PostHandler(w http.ResponseWriter, r *http.Request) {
 		json.Unmarshal(body, &data)
 	}
 
-	d := struct {
-		Type    string
-		Request struct {
-			ID string
-		}
-		Response []InstagramPost
-	}{
-		Type:     "ig-api-username",
-		Response: data,
-	}
-	d.Request.ID = igID
-	//Log(d)
+	// d := struct {
+	// 	Type    string
+	// 	Request struct {
+	// 		ID string
+	// 	}
+	// 	Response []InstagramPost
+	// }{
+	// 	Type:     "ig-api-username",
+	// 	Response: data,
+	// }
+	// d.Request.ID = igID
+	// Log(d)
+
 	JSONView(w, r, data, http.StatusOK)
 }
 

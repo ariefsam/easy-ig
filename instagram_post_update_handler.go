@@ -32,16 +32,23 @@ func UpdatePostHandler(w http.ResponseWriter, r *http.Request) {
 			data.StoreDisplayURL()
 		}
 	}
-	d := struct {
-		Type    string
-		Request struct {
-			Shortcode string
-		}
-		Response InstagramPost
-	}{
-		Type:     "ig-api-get-post",
-		Response: data,
+	// d := struct {
+	// 	Type    string
+	// 	Request struct {
+	// 		Shortcode string
+	// 	}
+	// 	Response InstagramPost
+	// }{
+	// 	Type:     "ig-api-get-post",
+	// 	Response: data,
+	// }
+	// d.Request.Shortcode = shortcode
+	// data.Username = ""
+	if data.Username == "" {
+
+		JSONView(w, r, map[string]string{"error": "We were sorry, our request blocked by Instagram. Your RapidAPI quota or overage will not be reduced. Please try again, we will try another IP Address."}, http.StatusBadGateway)
+		return
+
 	}
-	d.Request.Shortcode = shortcode
 	JSONView(w, r, data, http.StatusOK)
 }
