@@ -34,22 +34,46 @@ type Instagram struct {
 }
 
 type InstagramPost struct {
-	ID               string   `json:"id"`
-	TimestampTaken   int      `json:"timestamp_taken"`
-	Shortcode        string   `json:"shortcode"`
-	Caption          string   `json:"caption"`
-	DisplayURL       string   `json:"display_url"`
-	Comment          int      `json:"comment"`
-	Like             int      `json:"like"`
-	VideoView        int      `json:"video_view"`
-	VideoURL         string   `json:"video_url"`
-	Username         string   `json:"username"`
-	UserID           string   `json:"user_id"`
-	ProfilePicURL    string   `json:"profile_pic_url"`
-	LastUpdate       string   `json:"last_update"`
-	IsVideo          bool     `json:"is_video"`
-	StoredDisplayURL string   `json:"store_display_url"`
-	AICategory       []string `json:"ai_category"`
+	ID               string         `json:"id"`
+	TimestampTaken   int            `json:"timestamp_taken"`
+	Shortcode        string         `json:"shortcode"`
+	Caption          string         `json:"caption"`
+	DisplayURL       string         `json:"display_url"`
+	Comment          int            `json:"comment"`
+	Like             int            `json:"like"`
+	VideoView        int            `json:"video_view"`
+	VideoURL         string         `json:"video_url"`
+	Username         string         `json:"username"`
+	UserID           string         `json:"user_id"`
+	ProfilePicURL    string         `json:"profile_pic_url"`
+	LastUpdate       string         `json:"last_update"`
+	IsVideo          bool           `json:"is_video"`
+	StoredDisplayURL string         `json:"store_display_url"`
+	AICategory       []string       `json:"ai_category"`
+	IsCarousel       bool           `json:"is_carousel"`
+	CarouselPosts    []CarouselPost `json:"carousel_posts"`
+}
+
+type CarouselPost struct {
+	ID         string `json:"id"`
+	ShortCode  string `json:"shortcode"`
+	Dimensions struct {
+		Height int `json:"height"`
+		Width  int `json:"width"`
+	} `json:"dimensions"`
+	DisplayUrl           string       `json:"display_url"`
+	AccessibilityCaption string       `json:"accessibility_caption"`
+	IsVideo              bool         `json:"is_video"`
+	VideoViewCount       int          `json:"video_view_count"`
+	TaggedUser           []TaggedUser `json:"tagged_user"`
+}
+
+type TaggedUser struct {
+	Id            string `json:"id"`
+	FullName      string `json:"full_name"`
+	Username      string `json:"username"`
+	IsVerified    bool   `json:"is_verified"`
+	ProfilePicUrl string `json:"profile_pic_url"`
 }
 
 func UsernameHandler(w http.ResponseWriter, r *http.Request) {
