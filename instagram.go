@@ -92,18 +92,25 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone5:fmljzy13ygqd@zproxy.lum-superproxy.io:22225")
 		myClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
 
-		profile, err := instagram.GetProfile(data.Username, myClient)
+		profile, statusCode, err := instagram.GetProfile(data.Username, myClient)
 
 		if err != nil {
 			sentry.CaptureException(err)
 		}
 		var try int
-		for profile.FullName == "" {
-			if try > 15 {
-				break
+		if statusCode != 404 {
+			for profile.FullName == "" {
+				if try > 15 {
+					break
+				}
+				profile, statusCode, _ = instagram.GetProfile(data.Username, myClient)
+				try++
 			}
-			profile, _ = instagram.GetProfile(data.Username, myClient)
-			try++
+		}
+
+		if statusCode == 404 {
+			JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced."}, 200)
+			return
 		}
 
 		if profile.Username == "" {
