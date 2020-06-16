@@ -1,10 +1,8 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -13,17 +11,7 @@ import (
 var router *mux.Router
 
 func main() {
-	myClient := &http.Client{}
-	proxyUrl, _ := url.Parse("http://lum-customer-hl_52c756b8-zone-zone1:cjajlzx3q8wk@zproxy.luminati.io:22225")
-	myClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
 
-	x, err := myClient.Get("https://api.myip.com/")
-	if err != nil {
-		log.Println(err)
-	} else {
-		body, _ := ioutil.ReadAll(x.Body)
-		log.Println(string(body))
-	}
 	router = mux.NewRouter()
 
 	router.Path("/username").HandlerFunc(UsernameHandler)

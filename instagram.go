@@ -7,7 +7,7 @@ import (
 	"net/url"
 
 	"github.com/getsentry/sentry-go"
-	"gitlab.com/ariefhidayatulloh/golang-package/instagram"
+	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
 
 type Instagram struct {
@@ -88,28 +88,34 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		myClient := &http.Client{}
 		/*lum-customer-ronaldsihom-zone-zone5-mobile:fmljzy13ygqd*/
 		// proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone3:zfbvdqv0nsj4@zproxy.lum-superproxy.io:22225")
-		// proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone3:zfbvdqv0nsj4@zproxy.lum-superproxy.io:22225")
-		proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone5:fmljzy13ygqd@zproxy.lum-superproxy.io:22225")
+		proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone3:zfbvdqv0nsj4@zproxy.lum-superproxy.io:22225")
+		// proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone5:fmljzy13ygqd@zproxy.lum-superproxy.io:22225")
 		myClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
 
-		profile, statusCode, err := instagram.GetProfile(data.Username, myClient)
+		profile, statusCode, isRestricted, err := instagram.GetProfile(data.Username, myClient)
 
 		if err != nil {
 			sentry.CaptureException(err)
 		}
 		var try int
-		if statusCode != 404 {
-			for profile.FullName == "" {
-				if try > 15 {
-					break
-				}
-				profile, statusCode, _ = instagram.GetProfile(data.Username, myClient)
-				try++
+
+		for profile.Username == "" && statusCode != 404 && !isRestricted {
+
+			if try > 15 {
+				break
 			}
+			profile, statusCode, isRestricted, _ = instagram.GetProfile(data.Username, myClient)
+			try++
+
 		}
 
 		if statusCode == 404 {
 			JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced."}, 200)
+			return
+		}
+
+		if isRestricted {
+			JSONView(w, r, map[string]string{"client_error": "Profile restricted for 18+, Our API is public app, so we cannot read restricted profile without login. Your RapidAPI quota still reduced."}, 200)
 			return
 		}
 
