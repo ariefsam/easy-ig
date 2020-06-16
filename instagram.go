@@ -88,7 +88,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		myClient := &http.Client{}
 		/*lum-customer-ronaldsihom-zone-zone5-mobile:fmljzy13ygqd*/
 		// proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone3:zfbvdqv0nsj4@zproxy.lum-superproxy.io:22225")
-		proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone3:zfbvdqv0nsj4@zproxy.lum-superproxy.io:22225")
+		proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone3-country-us:zfbvdqv0nsj4@zproxy.lum-superproxy.io:22225")
 		// proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone5:fmljzy13ygqd@zproxy.lum-superproxy.io:22225")
 		myClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
 
