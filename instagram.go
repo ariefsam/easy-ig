@@ -85,6 +85,10 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if data.Username != "" {
+		if data.Username == "explore" {
+			JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced."}, 200)
+			return
+		}
 		myClient := &http.Client{}
 		/*lum-customer-ronaldsihom-zone-zone5-mobile:fmljzy13ygqd*/
 		// proxyUrl, _ := url.Parse("http://lum-customer-ronaldsihom-zone-zone3:zfbvdqv0nsj4@zproxy.lum-superproxy.io:22225")
