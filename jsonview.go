@@ -8,6 +8,7 @@ import (
 func JSONView(w http.ResponseWriter, r *http.Request, data interface{}, statuscode int) {
 	//log.Println(data)
 	view, _ := json.Marshal(data)
+	w.WriteHeader(statuscode)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(view)
 }
