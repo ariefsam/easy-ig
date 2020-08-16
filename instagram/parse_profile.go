@@ -20,6 +20,7 @@ func ParseProfile(html string) (profile Profile) {
 	profile.Biography = data.Biography
 	profile.TotalPost = data.EdgeOwnderToTimelineMedia.Count
 	profile.ExternalURL = data.ExternalURL
+	profile.IsVerified = data.IsVerified
 
 	var last_post []InstagramPost
 	var account_comment, account_like, account_video_view, totalVideo, tot int
