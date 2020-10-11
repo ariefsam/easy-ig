@@ -15,8 +15,7 @@ func main() {
 	router = mux.NewRouter()
 
 	router.Path("/username").HandlerFunc(UsernameHandler)
-	router.Path("/post").HandlerFunc(PostHandler)
-	router.Path("/get-post").HandlerFunc(UpdatePostHandler)
+	router.Path("/get-post").HandlerFunc(GetPostByShortcodeHandler)
 	router.Use(rapidApiMiddleware)
 
 	//loggedRouter := handlers.LoggingHandler(os.Stdout, r)

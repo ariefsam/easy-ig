@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -12,4 +13,8 @@ func JSONView(w http.ResponseWriter, r *http.Request, data interface{}, statusco
 	w.WriteHeader(statuscode)
 
 	w.Write(view)
+}
+
+func Log(data interface{}) {
+	log.Println(data)
 }

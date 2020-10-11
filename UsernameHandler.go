@@ -1,12 +1,10 @@
 package main
 
 import (
-	"encoding/json"
-	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 
-	"github.com/getsentry/sentry-go"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
 
@@ -99,7 +97,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		profile, statusCode, isRestricted, err := instagram.GetProfile(data.Username, myClient)
 
 		if err != nil {
-			sentry.CaptureException(err)
+			log.Println(err)
 		}
 		var try int
 
@@ -131,52 +129,4 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	JSONView(w, r, "", 200)
-}
-
-func PostHandler(w http.ResponseWriter, r *http.Request) {
-
-	var data []InstagramPost
-	igID := _GET(r, "instagram_id")
-	if igID != "" {
-
-		url := "https://adf.sgp1.digitaloceanspaces.com/ig/account/post/" + igID
-		resp, err := http.Get(url)
-		if err != nil {
-			sentry.CaptureException(err)
-		}
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		json.Unmarshal(body, &data)
-	}
-
-	// d := struct {
-	// 	Type    string
-	// 	Request struct {
-	// 		ID string
-	// 	}
-	// 	Response []InstagramPost
-	// }{
-	// 	Type:     "ig-api-username",
-	// 	Response: data,
-	// }
-	// d.Request.ID = igID
-	// Log(d)
-
-	JSONView(w, r, data, http.StatusOK)
-}
-
-func GetImageFromURL(url string) (img []byte, err error) {
-	response, err := http.Get(url)
-	if err != nil {
-		return
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return
-	}
-
-	response.Body.Close()
-	img = body
-	return
 }

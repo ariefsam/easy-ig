@@ -3,12 +3,11 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
-
-	"github.com/getsentry/sentry-go"
 )
 
-func UpdatePostHandler(w http.ResponseWriter, r *http.Request) {
+func GetPostByShortcodeHandler(w http.ResponseWriter, r *http.Request) {
 
 	var data InstagramPost
 	shortcode := _GET(r, "shortcode")
@@ -20,18 +19,11 @@ func UpdatePostHandler(w http.ResponseWriter, r *http.Request) {
 	url := "https://ig.adpl.bz/update-post?shortcode=" + shortcode
 	resp, err := http.Get(url)
 	if err != nil {
-		sentry.CaptureException(err)
+		log.Println(err)
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	json.Unmarshal(body, &data)
-
-	if data.ID != "" {
-		storeImage := _GET(r, "store_image")
-		if storeImage == "1" {
-			data.StoreDisplayURL()
-		}
-	}
 
 	JSONView(w, r, data, http.StatusOK)
 }
