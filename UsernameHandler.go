@@ -88,8 +88,10 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		myClient := &http.Client{}
-		proxyURL, _ := url.Parse(config.Proxy)
-		myClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+		if config.Proxy != "" {
+			proxyURL, _ := url.Parse(config.Proxy)
+			myClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+		}
 
 		profile, statusCode, isRestricted, err := instagram.GetProfile(data.Username, myClient)
 
