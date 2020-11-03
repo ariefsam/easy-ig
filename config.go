@@ -12,6 +12,7 @@ type Config struct {
 	RapidApi struct {
 		ProxySecret string
 	}
+	Proxy string
 }
 
 var config Config
@@ -32,6 +33,11 @@ func LoadConfig() (data Config) {
 		data.Port = "8211"
 	}
 	data.RapidApi.ProxySecret = os.Getenv("RAPIDAPI_PROXY_SECRET")
+
+	data.Proxy = os.Getenv("PROXY")
+	if data.Proxy == "" {
+		data.Proxy = "http://lum-customer-ronaldsihom-zone-zone3-country-us:zfbvdqv0nsj4@zproxy.lum-superproxy.io:22225"
+	}
 
 	return data
 }
