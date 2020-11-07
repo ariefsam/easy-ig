@@ -11,12 +11,15 @@ import (
 var router *mux.Router
 
 func main() {
-
+	config = LoadConfig()
+	log.Printf("%+v", config)
 	router = mux.NewRouter()
 
 	router.Path("/username").HandlerFunc(UsernameHandler)
 	router.Path("/get-post").HandlerFunc(GetPostByShortcodeHandler)
-	router.Use(rapidApiMiddleware)
+	if config.RapidApi.ProxySecret != "" {
+		router.Use(rapidApiMiddleware)
+	}
 
 	//loggedRouter := handlers.LoggingHandler(os.Stdout, r)
 	srv := &http.Server{
