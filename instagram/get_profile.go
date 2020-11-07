@@ -1,8 +1,10 @@
 package instagram
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -67,5 +69,18 @@ func GetProfile(username string, myClient *http.Client) (profile Profile, status
 	profile = ParseProfile(string(body))
 	isRestricted = IsRestricted(string(body))
 
+	return
+}
+
+func GetProfileByLocalProxy(localProxy string, username string, myClient *http.Client) (profile Profile, statusCode int, isRestricted bool, err error) {
+	url := localProxy + "username?username=" + username
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	json.Unmarshal(body, &profile)
 	return
 }

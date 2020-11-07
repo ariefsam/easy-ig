@@ -12,14 +12,11 @@ type Config struct {
 	RapidApi struct {
 		ProxySecret string
 	}
-	Proxy string
+	Proxy      string
+	LocalProxy string
 }
 
 var config Config
-
-func init() {
-	config = LoadConfig()
-}
 
 func LoadConfig() (data Config) {
 	err := godotenv.Load()
@@ -35,6 +32,7 @@ func LoadConfig() (data Config) {
 	data.RapidApi.ProxySecret = os.Getenv("RAPIDAPI_PROXY_SECRET")
 
 	data.Proxy = os.Getenv("PROXY")
+	data.LocalProxy = os.Getenv("LOCAL_PROXY")
 
 	return data
 }

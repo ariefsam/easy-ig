@@ -91,21 +91,30 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		if config.Proxy != "" {
 			proxyURL, _ := url.Parse(config.Proxy)
 			myClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+			log.Println("Using proxy: ", proxyURL)
 		}
 
-		profile, statusCode, isRestricted, err := instagram.GetProfile(data.Username, myClient)
+		var profile instagram.Profile
+		var try, statusCode int
+		var isRestricted bool
+		var err error
 
-		if err != nil {
-			log.Println(err)
+		if config.LocalProxy != "" {
+			localClient := &http.Client{}
+			log.Println("using local client ", config.LocalProxy)
+			profile, statusCode, isRestricted, err = instagram.GetProfileByLocalProxy(config.LocalProxy, data.Username, localClient)
 		}
-		var try int
 
 		for profile.Username == "" && statusCode != 404 && !isRestricted {
+			log.Println("Trying using proxy ", try)
 
 			if try > 15 {
 				break
 			}
-			profile, statusCode, isRestricted, _ = instagram.GetProfile(data.Username, myClient)
+			profile, statusCode, isRestricted, err = instagram.GetProfile(data.Username, myClient)
+			if err != nil {
+				log.Println(err)
+			}
 			try++
 
 		}

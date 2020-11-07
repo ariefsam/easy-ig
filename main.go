@@ -11,7 +11,8 @@ import (
 var router *mux.Router
 
 func main() {
-
+	config = LoadConfig()
+	log.Printf("%+v", config)
 	router = mux.NewRouter()
 
 	router.Path("/username").HandlerFunc(UsernameHandler)
