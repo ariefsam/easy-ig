@@ -122,6 +122,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 			JSONView(w, r, map[string]string{"error": "We were sorry, our request blocked by Instagram. Your RapidAPI quota or overage will not be reduced. Please try again, we will try another IP Address."}, http.StatusBadGateway)
 			return
 		}
+		log.Println(data.Username, profile.Follower)
 		JSONView(w, r, profile, 200)
 		return
 	}
