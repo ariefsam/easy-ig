@@ -103,6 +103,10 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 			localClient := &http.Client{}
 			log.Println("using local client ", config.LocalProxy)
 			profile, statusCode, isRestricted, err = instagram.GetProfileByLocalProxy(config.LocalProxy, data.Username, localClient)
+			if profile.IsExist == "no" {
+				JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
+				return
+			}
 		}
 
 		for profile.Username == "" && statusCode != 404 && !isRestricted {
@@ -120,7 +124,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if statusCode == 404 {
-			JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced."}, 200)
+			JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
 			return
 		}
 

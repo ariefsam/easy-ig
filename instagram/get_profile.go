@@ -29,6 +29,7 @@ type Profile struct {
 	AverageVideoView    int    `json:"average_video_view"`
 
 	LastPost []InstagramPost `json:"last_post"`
+	IsExist  string          `json:"is_exist"`
 }
 
 type InstagramPost struct {
