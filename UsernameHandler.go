@@ -95,7 +95,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var profile instagram.Profile
-		var try, statusCode int
+		var try, maxTry, statusCode int
 		var isRestricted bool
 		var err error
 
@@ -109,10 +109,15 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		maxTry = 15
+		if config.Proxy == "" {
+			maxTry = 2
+		}
 		for profile.Username == "" && statusCode != 404 && !isRestricted {
+
 			log.Println("Trying using proxy ", try)
 
-			if try > 15 {
+			if try > maxTry {
 				break
 			}
 			profile, statusCode, isRestricted, err = instagram.GetProfile(data.Username, myClient)

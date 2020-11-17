@@ -24,7 +24,7 @@ func Test_GetProfile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotProfile, err := GetProfile(tt.args.username, &http.Client{})
+			gotProfile, _, _, err := GetProfile(tt.args.username, &http.Client{})
 			ok(t, err)
 			if gotProfile.Username != tt.args.username {
 				t.Errorf("Bad response from Instagram %v %s", gotProfile, tt.name)
