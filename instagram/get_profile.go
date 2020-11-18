@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 )
 
 type Profile struct {
@@ -74,8 +75,11 @@ func GetProfile(username string, myClient *http.Client) (profile Profile, status
 }
 
 func GetProfileByLocalProxy(localProxy string, username string, myClient *http.Client) (profile Profile, statusCode int, isRestricted bool, err error) {
+	client := http.Client{
+		Timeout: 5 * time.Second,
+	}
 	url := localProxy + "username?username=" + username
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		log.Println(err)
 		return
