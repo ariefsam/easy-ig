@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
@@ -124,7 +125,12 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 			if try > maxTry {
 				break
 			}
-			profile, statusCode, isRestricted, err = instagram.GetProfile(data.Username, myClient)
+
+			if os.Getenv("SCRAPERAPI") {
+				profile, statusCode, isRestricted, err = instagram.GetProfileByScraperAPI(data.Username)
+			} else {
+				profile, statusCode, isRestricted, err = instagram.GetProfile(data.Username, myClient)
+			}
 			if err != nil {
 				log.Println(err)
 			}

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -53,7 +54,7 @@ type InstagramPost struct {
 }
 
 func GetProfile(username string, myClient *http.Client) (profile Profile, statusCode int, isRestricted bool, err error) {
-	address := "https://instagram.com/" + username + "?__a=1"
+	address := "https://www.instagram.com/" + username + "?__a=1"
 	resp, err := myClient.Get(address)
 	if err != nil {
 		return
@@ -62,11 +63,13 @@ func GetProfile(username string, myClient *http.Client) (profile Profile, status
 	statusCode = resp.StatusCode
 
 	fmt.Println(resp.StatusCode)
+
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return
 	}
+	fmt.Println(string(body))
 
 	profile = ParseProfile(string(body))
 	isRestricted = IsRestricted(string(body))
@@ -87,5 +90,30 @@ func GetProfileByLocalProxy(localProxy string, username string, myClient *http.C
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	json.Unmarshal(body, &profile)
+	return
+}
+
+func GetProfileByScraperAPI(username string) (profile Profile, statusCode int, isRestricted bool, err error) {
+	myClient := &http.Client{}
+	address := os.Getenv("SCRAPERAPI") + username + "?__a=1"
+	resp, err := myClient.Get(address)
+	if err != nil {
+		return
+	}
+
+	statusCode = resp.StatusCode
+
+	fmt.Println(resp.StatusCode)
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	fmt.Println(string(body))
+
+	profile = ParseProfile(string(body))
+	isRestricted = IsRestricted(string(body))
+
 	return
 }
