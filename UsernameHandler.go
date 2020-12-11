@@ -126,7 +126,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 
-			if os.Getenv("SCRAPERAPI") {
+			if os.Getenv("SCRAPERAPI") != "" {
 				profile, statusCode, isRestricted, err = instagram.GetProfileByScraperAPI(data.Username)
 			} else {
 				profile, statusCode, isRestricted, err = instagram.GetProfile(data.Username, myClient)
