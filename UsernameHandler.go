@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 	"net/http"
 	"net/url"
@@ -91,7 +92,13 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		myClient := &http.Client{}
 		if config.Proxy != "" {
 			proxyURL, _ := url.Parse(config.Proxy)
-			myClient = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+			myClient = &http.Client{
+				Transport: &http.Transport{
+					Proxy:           http.ProxyURL(proxyURL),
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				},
+			}
+
 			log.Println("Using proxy: ", proxyURL)
 		}
 
