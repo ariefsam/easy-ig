@@ -31,7 +31,25 @@ type Profile struct {
 	AverageVideoView    int    `json:"average_video_view"`
 
 	LastPost []InstagramPost `json:"last_post"`
+	IGTV     []IGTV          `json:"igtv",omitempty`
 	IsExist  string          `json:"is_exist"`
+}
+
+type IGTV struct {
+	ID             string `json:"id"`
+	Shortcode      string `json:"shortcode"`
+	DisplayURL     string `json:"display_url"`
+	VideoURL       string `json:"video_url"`
+	VideoViewCount int    `json:"video_view_count"`
+	Dimensions     struct {
+		Height int `json:"height"`
+		Width  int `json:"width"`
+	} `json:"dimensions"`
+	Comment          int     `json:"count"`
+	Like             int     `json:"count"`
+	TakenAtTimestamp int     `json:"taken_at_timestamp"`
+	VideoDuration    float64 `json:"video_duration"`
+	Caption          string  `json:"caption"`
 }
 
 type InstagramPost struct {

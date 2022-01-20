@@ -57,6 +57,28 @@ func ParseProfile(html string) (profile Profile) {
 		}
 
 	}
+
+	profile.IGTV = []IGTV{}
+
+	for _, v := range page.Graphql.User.EdgeFelixVideoTimeline.Edges {
+		caption := ""
+		if len(v.Node.EdgeMediaToCaption.Edges) > 0 {
+			caption = v.Node.EdgeMediaToCaption.Edges[0].Node.Text
+		}
+		profile.IGTV = append(profile.IGTV, IGTV{
+			ID:               v.Node.ID,
+			Comment:          v.Node.EdgeMediaToComment.Count,
+			Like:             v.Node.EdgeLikedBy.Count,
+			Shortcode:        v.Node.Shortcode,
+			DisplayURL:       v.Node.DisplayURL,
+			VideoURL:         v.Node.VideoURL,
+			VideoViewCount:   v.Node.VideoViewCount,
+			Dimensions:       v.Node.Dimensions,
+			TakenAtTimestamp: v.Node.TakenAtTimestamp,
+			VideoDuration:    v.Node.VideoDuration,
+			Caption:          caption,
+		})
+	}
 	return
 }
 
@@ -89,7 +111,51 @@ type RawUser struct {
 			Node PostNode `json:"node"`
 		} `json:"edges"`
 	} `json:"edge_owner_to_timeline_media"`
-	LastUpdateStatus string
+	EdgeFelixVideoTimeline *EdgeFelixVideoTimeline `json:"edge_felix_video_timeline,omitempty"`
+	LastUpdateStatus       string
+}
+
+/*
+"edge_media_to_caption": {
+                "edges": [
+                  {
+                    "node": {
+                      "text": "Today is World Mental Health Day and we support kids' mental health and organizations like @YourMomCares and RxWell that are doing innovative, groundbreaking work in transforming how young people receive the mental health support they need.\nWe are donating to help continue the further development of behavioral health care that was not previously available for adolescents. Text maroon5 to 44-321 to help support this cause as well."
+                    }
+                  }
+                ]
+              },
+*/
+type EdgeFelixVideoTimeline struct {
+	Count int `json:"count"`
+	Edges []struct {
+		Node struct {
+			ID             string `json:"id"`
+			Shortcode      string `json:"shortcode"`
+			DisplayURL     string `json:"display_url"`
+			VideoURL       string `json:"video_url"`
+			VideoViewCount int    `json:"video_view_count"`
+			Dimensions     struct {
+				Height int `json:"height"`
+				Width  int `json:"width"`
+			} `json:"dimensions"`
+			EdgeMediaToComment struct {
+				Count int `json:"count"`
+			} `json:"edge_media_to_comment"`
+			EdgeLikedBy struct {
+				Count int `json:"count"`
+			} `json:"edge_liked_by"`
+			EdgeMediaToCaption struct {
+				Edges []struct {
+					Node struct {
+						Text string `json:"text"`
+					} `json:"node"`
+				} `json:"edges"`
+			} `json:"edge_media_to_caption"`
+			TakenAtTimestamp int     `json:"taken_at_timestamp"`
+			VideoDuration    float64 `json:"video_duration"`
+		} `json:"node"`
+	} `json:"edges"`
 }
 
 type PostNode struct {
