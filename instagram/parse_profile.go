@@ -79,6 +79,7 @@ func ParseProfile(html string) (profile Profile) {
 			Caption:          caption,
 		})
 	}
+
 	return
 }
 
@@ -111,7 +112,7 @@ type RawUser struct {
 			Node PostNode `json:"node"`
 		} `json:"edges"`
 	} `json:"edge_owner_to_timeline_media"`
-	EdgeFelixVideoTimeline *EdgeFelixVideoTimeline `json:"edge_felix_video_timeline,omitempty"`
+	EdgeFelixVideoTimeline EdgeFelixVideoTimeline `json:"edge_felix_video_timeline,omitempty"`
 	LastUpdateStatus       string
 }
 
