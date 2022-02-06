@@ -52,23 +52,36 @@ type IGTV struct {
 	Caption          string  `json:"caption"`
 }
 
+type RawPost struct {
+	TakenAt int    `json:"taken_at"`
+	PK      int    `json:"pk"`
+	Code    string `json:"code"`
+	User    struct {
+		Username string `json:"username"`
+	} `json:"user"`
+	Caption struct {
+		Text string `json:"text"`
+	} `json:"caption"`
+}
 type InstagramPost struct {
-	ID               string   `json:"id"`
-	TimestampTaken   int      `json:"timestamp_taken"`
-	Shortcode        string   `json:"shortcode"`
-	Caption          string   `json:"caption"`
-	DisplayURL       string   `json:"display_url"`
-	Comment          int      `json:"comment"`
-	Like             int      `json:"like"`
-	VideoView        int      `json:"video_view"`
-	VideoURL         string   `json:"video_url"`
-	Username         string   `json:"username"`
-	UserID           string   `json:"user_id"`
-	ProfilePicURL    string   `json:"profile_pic_url"`
-	LastUpdate       string   `json:"last_update"`
-	IsVideo          bool     `json:"is_video"`
-	StoredDisplayURL string   `json:"store_display_url"`
-	AICategory       []string `json:"ai_category"`
+	ID               string         `json:"id"`
+	TimestampTaken   int            `json:"timestamp_taken"`
+	Shortcode        string         `json:"shortcode"`
+	Caption          string         `json:"caption"`
+	DisplayURL       string         `json:"display_url"`
+	Comment          int            `json:"comment"`
+	Like             int            `json:"like"`
+	VideoView        int            `json:"video_view"`
+	VideoURL         string         `json:"video_url"`
+	Username         string         `json:"username"`
+	UserID           string         `json:"user_id"`
+	ProfilePicURL    string         `json:"profile_pic_url"`
+	LastUpdate       string         `json:"last_update"`
+	IsVideo          bool           `json:"is_video"`
+	StoredDisplayURL string         `json:"store_display_url"`
+	AICategory       []string       `json:"ai_category"`
+	IsCarousel       bool           `json:"is_carousel"`
+	CarouselPosts    []CarouselPost `json:"carousel_posts"`
 }
 
 func GetProfile(username string, myClient *http.Client) (profile Profile, statusCode int, isRestricted bool, err error) {

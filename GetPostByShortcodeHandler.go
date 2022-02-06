@@ -1,29 +1,46 @@
 package main
 
 import (
-	"encoding/json"
+	"crypto/tls"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+
+	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
 
 func GetPostByShortcodeHandler(w http.ResponseWriter, r *http.Request) {
 
-	var data InstagramPost
+	var data instagram.InstagramPost
 	shortcode := _GET(r, "shortcode")
 
 	if len(shortcode) < 5 {
 		return
 	}
 
-	url := "https://ig.adpl.bz/update-post?shortcode=" + shortcode
-	resp, err := http.Get(url)
+	urlPost := "https://www.instagram.com/p/" + shortcode + "?__a=1"
+
+	myClient := &http.Client{}
+	if config.Proxy != "" {
+		proxyURL, _ := url.Parse(config.Proxy)
+		myClient = &http.Client{
+			Transport: &http.Transport{
+				Proxy:           http.ProxyURL(proxyURL),
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}
+
+		log.Println("Using proxy: ", proxyURL)
+	}
+
+	resp, err := myClient.Get(urlPost)
 	if err != nil {
 		log.Println(err)
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	json.Unmarshal(body, &data)
+	body, _ := ioutil.ReadAll(resp.Body)
+	data = instagram.ParsePost(string(body))
 
 	JSONView(w, r, data, http.StatusOK)
 }

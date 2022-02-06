@@ -2,6 +2,8 @@ package instagram
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRestricted(t *testing.T) {
@@ -14,7 +16,7 @@ func TestRestricted(t *testing.T) {
 
 `
 	isRestricted := IsRestricted(str)
-	assert(t, isRestricted, "Must true")
+	assert.Equal(t, isRestricted, "Must true")
 }
 
 func TestRestrictedIndonesia(t *testing.T) {
@@ -27,5 +29,5 @@ func TestRestrictedIndonesia(t *testing.T) {
 
 `
 	isRestricted := IsRestricted(str)
-	assert(t, isRestricted, "Must true")
+	assert.Equal(t, isRestricted, "Must true")
 }

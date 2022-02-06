@@ -2,7 +2,6 @@ package instagram
 
 import (
 	"encoding/json"
-	"time"
 )
 
 func ParseProfile(html string) (profile Profile) {
@@ -159,73 +158,38 @@ type EdgeFelixVideoTimeline struct {
 	} `json:"edges"`
 }
 
-type PostNode struct {
-	TypeName           string `json:"__typename"`
-	Id                 string `json:"id"`
-	ShortCode          string `json:"shortcode"`
-	EdgeMediaToComment struct {
-		Count int `json:"count"`
-	} `json:"edge_media_to_comment"`
-	EdgeMediaPreviewComment struct {
-		Count int `json:"count"`
-	} `json:"edge_media_preview_comment"`
-	EdgeMediaToCaption struct {
-		Edges []struct {
-			Node struct {
-				Text string `json:"text"`
-			} `json:"node"`
-		} `json:"edges"`
-	} `json:"edge_media_to_caption"`
-	DisplayUrl       string `json:"display_url"`
-	TakenAtTimestamp int    `json:"taken_at_timestamp"`
-	EdgeLikedBy      struct {
-		Count int `json:"count"`
-	} `json:"edge_liked_by"`
-	EdgeMediaPreviewLike struct {
-		Count int `json:"count"`
-	} `json:"edge_media_preview_like"`
-	Owner struct {
-		Id            string `json:"id"`
-		Username      string `json:"username"`
-		ProfilePicURL string `json:"profile_pic_url"`
-	} `json:"owner"`
-	IsVideo        bool   `json:"is_video"`
-	VideoURL       string `json:"video_url"`
-	VideoViewCount int    `json:"video_view_count"`
-}
-
 type PostPage struct {
 	GraphQL struct {
 		ShortCodeMedia PostNode `json:"shortcode_media"`
 	} `json:"graphql"`
 }
 
-func (node *PostNode) ToAccountPost() InstagramPost {
-	var post InstagramPost
-	post.TimestampTaken = node.TakenAtTimestamp
-	post.UserID = node.Owner.Id
-	if len(node.EdgeMediaToCaption.Edges) > 0 {
-		post.Caption = node.EdgeMediaToCaption.Edges[0].Node.Text
-	}
-	post.ID = node.Id
-	post.DisplayURL = node.DisplayUrl
-	post.Comment = node.EdgeMediaToComment.Count
-	if post.Comment == 0 {
-		post.Comment = node.EdgeMediaPreviewComment.Count
-	}
-	post.Like = node.EdgeLikedBy.Count
-	if post.Like == 0 {
-		post.Like = node.EdgeMediaPreviewLike.Count
-	}
-	post.VideoView = node.VideoViewCount
-	post.VideoURL = node.VideoURL
-	post.Shortcode = node.ShortCode
-	post.DisplayURL = node.DisplayUrl
-	post.IsVideo = node.IsVideo
-	post.Username = node.Owner.Username
-	post.UserID = node.Owner.Id
-	post.ProfilePicURL = node.Owner.ProfilePicURL
-	t := time.Now()
-	post.LastUpdate = t.Format(time.RFC3339)
-	return post
-}
+// func (node *PostNode) ToAccountPost() InstagramPost {
+// 	var post InstagramPost
+// 	post.TimestampTaken = node.TakenAtTimestamp
+// 	post.UserID = node.Owner.Id
+// 	if len(node.EdgeMediaToCaption.Edges) > 0 {
+// 		post.Caption = node.EdgeMediaToCaption.Edges[0].Node.Text
+// 	}
+// 	post.ID = node.Id
+// 	post.DisplayURL = node.DisplayUrl
+// 	post.Comment = node.EdgeMediaToComment.Count
+// 	if post.Comment == 0 {
+// 		post.Comment = node.EdgeMediaPreviewComment.Count
+// 	}
+// 	post.Like = node.EdgeLikedBy.Count
+// 	if post.Like == 0 {
+// 		post.Like = node.EdgeMediaPreviewLike.Count
+// 	}
+// 	post.VideoView = node.VideoViewCount
+// 	post.VideoURL = node.VideoURL
+// 	post.Shortcode = node.ShortCode
+// 	post.DisplayURL = node.DisplayUrl
+// 	post.IsVideo = node.IsVideo
+// 	post.Username = node.Owner.Username
+// 	post.UserID = node.Owner.Id
+// 	post.ProfilePicURL = node.Owner.ProfilePicURL
+// 	t := time.Now()
+// 	post.LastUpdate = t.Format(time.RFC3339)
+// 	return post
+// }
