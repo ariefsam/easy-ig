@@ -119,9 +119,9 @@ func (node *PostNode) ToAccountPost() InstagramPost {
 	if post.Comment == 0 {
 		post.Comment = node.EdgeMediaPreviewComment.Count
 	}
-	post.Like = node.EdgeLikedBy.Count
+	post.Like = node.EdgeMediaPreviewLike.Count
 	if post.Like == 0 {
-		post.Like = node.EdgeMediaPreviewLike.Count
+		post.Like = node.EdgeLikedBy.Count
 	}
 	post.VideoView = node.VideoViewCount
 	post.VideoURL = node.VideoURL

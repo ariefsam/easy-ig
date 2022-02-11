@@ -145,6 +145,9 @@ type EdgeFelixVideoTimeline struct {
 			EdgeLikedBy struct {
 				Count int `json:"count"`
 			} `json:"edge_liked_by"`
+			EdgeMediaPreviewLike struct {
+				Count int `json:"count"`
+			} `json:"edge_media_preview_like"`
 			EdgeMediaToCaption struct {
 				Edges []struct {
 					Node struct {
