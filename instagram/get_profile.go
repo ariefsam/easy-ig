@@ -35,6 +35,32 @@ type Profile struct {
 	IsExist  string          `json:"is_exist"`
 }
 
+type ProfileWithBase64Image struct {
+	ID                    string `json:"id"`
+	FullName              string `json:"full_name"`
+	Biography             string `json:"biography"`
+	Username              string `json:"username"`
+	IsPrivate             bool   `json:"is_private"`
+	ExternalURL           string `json:"external_url"`
+	IsVerified            bool   `json:"is_verified"`
+	ProfilePicUrl         string `json:"profile_pic_url"`
+	ProfilePicBase64Image string `json:"profile_pic_base64_image"`
+	StoredProfilePicUrl   string `json:"stored_profile_pic_url"`
+	Following             int    `json:"following"`
+	Follower              int    `json:"follower"`
+	Like                  int    `json:"like"`
+	Comment               int    `json:"comment"`
+	VideoView             int    `json:"video_view"`
+	TotalPost             int    `json:"total_post"`
+	AverageLike           int    `json:"average_like"`
+	AverageComment        int    `json:"average_comment"`
+	AverageVideoView      int    `json:"average_video_view"`
+
+	LastPost []InstagramPost `json:"last_post"`
+	IGTV     []IGTV          `json:"igtv",omitempty`
+	IsExist  string          `json:"is_exist"`
+}
+
 type IGTV struct {
 	ID             string `json:"id"`
 	Shortcode      string `json:"shortcode"`

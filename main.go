@@ -16,6 +16,7 @@ func main() {
 	router = mux.NewRouter()
 
 	router.Path("/username").HandlerFunc(UsernameHandler)
+	router.Path("/username-with-base64-image").HandlerFunc(UsernameWithBase64ImageHandler)
 	router.Path("/get-post").HandlerFunc(GetPostByShortcodeHandler)
 	if config.RapidApi.ProxySecret != "" {
 		router.Use(rapidApiMiddleware)

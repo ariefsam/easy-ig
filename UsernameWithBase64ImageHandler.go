@@ -1,14 +1,47 @@
 package main
 
 import (
-	"crypto/tls"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
-	"os"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
+
+func getIgProfileWithBase64Image(r *http.Request, username string) (p instagram.ProfileWithBase64Image, clientError map[string]string, systemError error) {
+
+	profile, errClient, errSystem := getIgProfile(r, username)
+	if errClient != nil {
+		return
+	}
+
+	if errSystem != nil {
+		return
+	}
+
+	temp, _ := json.Marshal(profile)
+	json.Unmarshal(temp, &p)
+
+	imgRes, err := http.Get(p.ProfilePicUrl)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	imgByte, err := ioutil.ReadAll(imgRes.Body)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	mimeType := http.DetectContentType(imgByte)
+
+	base64Image := base64.StdEncoding.EncodeToString(imgByte)
+	base64Image = fmt.Sprintf("data:%s;base64,%s", mimeType, base64Image)
+	p.ProfilePicBase64Image = base64Image
+	return p, errClient, errSystem
+}
 
 func UsernameWithBase64ImageHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -18,84 +51,14 @@ func UsernameWithBase64ImageHandler(w http.ResponseWriter, r *http.Request) {
 		JSONView(w, r, nil, http.StatusBadRequest)
 		return
 	}
-	if data.Username != "" {
-		if data.Username == "explore" {
-			JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced."}, 200)
-			return
-		}
-		myClient := &http.Client{}
-		if config.Proxy != "" {
-			proxyURL, _ := url.Parse(config.Proxy)
-			myClient = &http.Client{
-				Transport: &http.Transport{
-					Proxy:           http.ProxyURL(proxyURL),
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				},
-			}
 
-			log.Println("Using proxy: ", proxyURL)
-		}
-
-		var profile instagram.Profile
-		var try, maxTry, statusCode int
-		var isRestricted bool
-		var err error
-
-		if config.LocalProxy != "" && _GET(r, "no_proxy") != "1" {
-			localClient := &http.Client{}
-			log.Println("using local client ", config.LocalProxy)
-			profile, statusCode, isRestricted, err = instagram.GetProfileByLocalProxy(config.LocalProxy, data.Username, localClient)
-			if profile.IsExist == "no" {
-				JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
-				return
-			}
-		}
-
-		if config.LocalProxy != "" && _GET(r, "no_proxy") == "1" {
-			log.Println("local proxy set, but no proxy choose")
-		}
-
-		maxTry = 15
-		if config.Proxy == "" {
-			maxTry = 2
-		}
-		for profile.Username == "" && statusCode != 404 && !isRestricted {
-
-			log.Println("Trying using proxy ", try)
-
-			if try > maxTry {
-				break
-			}
-
-			if os.Getenv("SCRAPERAPI") != "" {
-				profile, statusCode, isRestricted, err = instagram.GetProfileByScraperAPI(data.Username)
-			} else {
-				profile, statusCode, isRestricted, err = instagram.GetProfile(data.Username, myClient)
-			}
-			if err != nil {
-				log.Println(err)
-			}
-			try++
-
-		}
-
-		if statusCode == 404 {
-			JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
-			return
-		}
-
-		if isRestricted {
-			JSONView(w, r, map[string]string{"client_error": "Profile restricted for 18+, Our API is public app, so we cannot read restricted profile without login. Your RapidAPI quota still reduced."}, 200)
-			return
-		}
-
-		if profile.Username == "" {
-			JSONView(w, r, map[string]string{"error": "We were sorry, our request blocked by Instagram. Your RapidAPI quota or overage will not be reduced. Please try again, we will try another IP Address."}, http.StatusBadGateway)
-			return
-		}
-		log.Println(data.Username, profile.Follower)
-		JSONView(w, r, profile, 200)
+	profile, errClient, errSystem := getIgProfileWithBase64Image(r, data.Username)
+	if errClient != nil {
+		JSONView(w, r, errClient, 200)
 		return
 	}
-	JSONView(w, r, "", 200)
+	if errSystem != nil {
+		JSONView(w, r, map[string]string{"error": errSystem.Error()}, http.StatusBadGateway)
+	}
+	JSONView(w, r, profile, 200)
 }
