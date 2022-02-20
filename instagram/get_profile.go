@@ -56,9 +56,9 @@ type ProfileWithBase64Image struct {
 	AverageComment        int    `json:"average_comment"`
 	AverageVideoView      int    `json:"average_video_view"`
 
-	LastPost []InstagramPost `json:"last_post"`
-	IGTV     []IGTV          `json:"igtv",omitempty`
-	IsExist  string          `json:"is_exist"`
+	LastPost []InstagramPostWithBase64Image `json:"last_post"`
+	IGTV     []IGTV                         `json:"igtv",omitempty`
+	IsExist  string                         `json:"is_exist"`
 }
 
 type IGTV struct {
@@ -88,6 +88,28 @@ type RawPost struct {
 	Caption struct {
 		Text string `json:"text"`
 	} `json:"caption"`
+}
+
+type InstagramPostWithBase64Image struct {
+	ID                    string         `json:"id"`
+	TimestampTaken        int            `json:"timestamp_taken"`
+	Shortcode             string         `json:"shortcode"`
+	Caption               string         `json:"caption"`
+	DisplayURL            string         `json:"display_url"`
+	DisplayURLBase64Image string         `json:"display_url_base64_image"`
+	Comment               int            `json:"comment"`
+	Like                  int            `json:"like"`
+	VideoView             int            `json:"video_view"`
+	VideoURL              string         `json:"video_url"`
+	Username              string         `json:"username"`
+	UserID                string         `json:"user_id"`
+	ProfilePicURL         string         `json:"profile_pic_url"`
+	LastUpdate            string         `json:"last_update"`
+	IsVideo               bool           `json:"is_video"`
+	StoredDisplayURL      string         `json:"store_display_url"`
+	AICategory            []string       `json:"ai_category"`
+	IsCarousel            bool           `json:"is_carousel"`
+	CarouselPosts         []CarouselPost `json:"carousel_posts"`
 }
 type InstagramPost struct {
 	ID               string         `json:"id"`

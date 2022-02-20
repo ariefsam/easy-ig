@@ -25,11 +25,17 @@ func getIgProfileWithBase64Image(r *http.Request, username string) (p instagram.
 	temp, _ := json.Marshal(profile)
 	json.Unmarshal(temp, &p)
 
-	imgRes, err := http.Get(p.ProfilePicUrl)
-	if err != nil {
-		log.Println(err)
-		return
+	p.ProfilePicBase64Image, _ = getBase64Image(p.ProfilePicUrl)
+
+	for k, v := range p.LastPost {
+		p.LastPost[k].DisplayURLBase64Image, _ = getBase64Image(v.DisplayURL)
 	}
+
+	return p, errClient, errSystem
+}
+
+func getBase64Image(url string) (base64Image string, err error) {
+	imgRes, err := http.Get(url)
 	imgByte, err := ioutil.ReadAll(imgRes.Body)
 	if err != nil {
 		log.Println(err)
@@ -37,10 +43,9 @@ func getIgProfileWithBase64Image(r *http.Request, username string) (p instagram.
 	}
 	mimeType := http.DetectContentType(imgByte)
 
-	base64Image := base64.StdEncoding.EncodeToString(imgByte)
+	base64Image = base64.StdEncoding.EncodeToString(imgByte)
 	base64Image = fmt.Sprintf("data:%s;base64,%s", mimeType, base64Image)
-	p.ProfilePicBase64Image = base64Image
-	return p, errClient, errSystem
+	return
 }
 
 func UsernameWithBase64ImageHandler(w http.ResponseWriter, r *http.Request) {
