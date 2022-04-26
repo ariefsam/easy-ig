@@ -113,7 +113,7 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 		log.Println("local proxy set, but no proxy choose")
 	}
 
-	maxTry = 15
+	maxTry = 5
 	if config.Proxy == "" {
 		maxTry = 2
 	}
