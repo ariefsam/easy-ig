@@ -141,7 +141,7 @@ func GetProfile(username string, myClient *http.Client) (profile Profile, status
 	statusCode = resp.StatusCode
 
 	log.Println(resp.StatusCode)
-	if statusCode == 502 {
+	if statusCode != 200 {
 		return
 	}
 
