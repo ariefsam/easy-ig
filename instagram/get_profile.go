@@ -2,7 +2,6 @@ package instagram
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -141,14 +140,14 @@ func GetProfile(username string, myClient *http.Client) (profile Profile, status
 
 	statusCode = resp.StatusCode
 
-	fmt.Println(resp.StatusCode)
+	log.Println(resp.StatusCode)
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return
 	}
-	fmt.Println(string(body))
+	log.Println(string(body))
 
 	profile = ParseProfile(string(body))
 	isRestricted = IsRestricted(string(body))
@@ -182,14 +181,14 @@ func GetProfileByScraperAPI(username string) (profile Profile, statusCode int, i
 
 	statusCode = resp.StatusCode
 
-	fmt.Println(resp.StatusCode)
+	log.Println(resp.StatusCode)
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return
 	}
-	fmt.Println(string(body))
+	log.Println(string(body))
 
 	profile = ParseProfile(string(body))
 	isRestricted = IsRestricted(string(body))
