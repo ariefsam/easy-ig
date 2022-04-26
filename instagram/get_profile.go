@@ -141,6 +141,9 @@ func GetProfile(username string, myClient *http.Client) (profile Profile, status
 	statusCode = resp.StatusCode
 
 	log.Println(resp.StatusCode)
+	if statusCode == 502 {
+		return
+	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
