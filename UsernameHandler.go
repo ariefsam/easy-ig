@@ -170,7 +170,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if errSystem != nil {
-		JSONView(w, r, map[string]string{"error": errSystem.Error()}, http.StatusBadGateway)
+		JSONView(w, r, map[string]string{"error": errSystem.Error()}, http.StatusBadRequest)
 	}
 	JSONView(w, r, profile, 200)
 
