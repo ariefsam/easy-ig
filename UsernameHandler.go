@@ -79,6 +79,7 @@ type TaggedUser struct {
 }
 
 func getIgProfile(r *http.Request, username string) (profile instagram.Profile, clientError map[string]string, systemError error) {
+	start := time.Now().Unix()
 	if username == "explore" {
 		clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
 		return
@@ -92,6 +93,7 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
 				ResponseHeaderTimeout: time.Second * 45,
 			},
+			Timeout: time.Second * 45,
 		}
 
 		log.Println("Using proxy: ", proxyURL)
@@ -130,7 +132,7 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 		if os.Getenv("SCRAPERAPI") != "" {
 			profile, statusCode, isRestricted, err = instagram.GetProfileByScraperAPI(username)
 		} else {
-			profile, statusCode, isRestricted, err = instagram.GetProfile(username, myClient)
+			profile, statusCode, isRestricted, err = instagram.GetProfile(username, myClient, start)
 		}
 		if err != nil {
 			log.Println(err)

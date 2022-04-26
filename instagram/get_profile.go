@@ -131,7 +131,7 @@ type InstagramPost struct {
 	CarouselPosts    []CarouselPost `json:"carousel_posts"`
 }
 
-func GetProfile(username string, myClient *http.Client) (profile Profile, statusCode int, isRestricted bool, err error) {
+func GetProfile(username string, myClient *http.Client, start int64) (profile Profile, statusCode int, isRestricted bool, err error) {
 	address := "https://www.instagram.com/" + username + "/?__a=1"
 	resp, err := myClient.Get(address)
 	if err != nil {
