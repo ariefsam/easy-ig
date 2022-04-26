@@ -132,7 +132,7 @@ type InstagramPost struct {
 }
 
 func GetProfile(username string, myClient *http.Client) (profile Profile, statusCode int, isRestricted bool, err error) {
-	address := "https://www.instagram.com/" + username + "?__a=1"
+	address := "https://www.instagram.com/" + username + "/?__a=1"
 	resp, err := myClient.Get(address)
 	if err != nil {
 		return
