@@ -64,6 +64,7 @@ func UsernameWithBase64ImageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if errSystem != nil {
 		JSONView(w, r, map[string]string{"error": errSystem.Error()}, http.StatusNotFound)
+		return
 	}
 	JSONView(w, r, profile, 200)
 }
