@@ -1,2 +1,2 @@
 #!/bin/bash
-ssh -R 9788:localhost:8211 root@178.128.63.156
+ssh -R 8886:localhost:8211 ec2-user@13.213.86.67

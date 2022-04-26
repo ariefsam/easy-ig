@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
@@ -87,8 +88,9 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 		proxyURL, _ := url.Parse(config.Proxy)
 		myClient = &http.Client{
 			Transport: &http.Transport{
-				Proxy:           http.ProxyURL(proxyURL),
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				Proxy:                 http.ProxyURL(proxyURL),
+				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+				ResponseHeaderTimeout: time.Second * 45,
 			},
 		}
 
@@ -171,6 +173,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if errSystem != nil {
 		JSONView(w, r, map[string]string{"error": errSystem.Error()}, http.StatusNotFound)
+		return
 	}
 	JSONView(w, r, profile, 200)
 
