@@ -11,6 +11,7 @@ import (
 var router *mux.Router
 
 func main() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	config = LoadConfig()
 	log.Printf("%+v", config)
 	router = mux.NewRouter()
