@@ -145,6 +145,11 @@ func GetProfile(username string, myClient *http.Client, start int64) (profile Pr
 		return
 	}
 
+	end := time.Now().Unix()
+	if end-start > 50 {
+		return
+	}
+
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
