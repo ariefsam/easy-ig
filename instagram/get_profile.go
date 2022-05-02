@@ -166,7 +166,10 @@ func GetProfile(username string, myClient *http.Client, start int64) (profile Pr
 func GetProfileByScrapeDo(username string, start int64) (profile Profile, statusCode int, isRestricted bool, err error) {
 	log.Println("Get profile by scrape do")
 	address := "http://api.scrape.do/?token=aa6119eab8424ca5b38c404b2cd1ebed5090de0e2d5&url=https://www.instagram.com/" + username + "/?__a=1"
-	resp, err := http.Get(address)
+	myClient := &http.Client{
+		Timeout: time.Second * 45,
+	}
+	resp, err := myClient.Get(address)
 	if err != nil {
 		return
 	}
