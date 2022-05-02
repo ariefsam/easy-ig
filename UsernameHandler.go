@@ -117,10 +117,15 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 		log.Println("local proxy set, but no proxy choose")
 	}
 
+	if profile.Username == "" && statusCode != 404 && !isRestricted {
+		profile, statusCode, isRestricted, err = instagram.GetProfileByScrapeDo(username, start)
+	}
+
 	maxTry = 1
 	if config.Proxy == "" {
 		maxTry = 2
 	}
+
 	for profile.Username == "" && statusCode != 404 && !isRestricted {
 
 		log.Println("Trying using proxy ", try)
@@ -140,6 +145,8 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 		try++
 
 	}
+
+	// http://api.scrape.do/?token=aa6119eab8424ca5b38c404b2cd1ebed5090de0e2d5&url=https://www.instagram.com/maroon5/?__a=1
 
 	if statusCode == 404 {
 		clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}

@@ -163,6 +163,39 @@ func GetProfile(username string, myClient *http.Client, start int64) (profile Pr
 	return
 }
 
+func GetProfileByScrapeDo(username string, start int64) (profile Profile, statusCode int, isRestricted bool, err error) {
+	log.Println("Get profile by scrape do")
+	address := "http://api.scrape.do/?token=aa6119eab8424ca5b38c404b2cd1ebed5090de0e2d5&url=https://www.instagram.com/" + username + "/?__a=1"
+	resp, err := http.Get(address)
+	if err != nil {
+		return
+	}
+
+	statusCode = resp.StatusCode
+
+	log.Println(resp.StatusCode)
+	if statusCode != 200 {
+		return
+	}
+
+	end := time.Now().Unix()
+	if end-start > 50 {
+		return
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	log.Println(string(body))
+
+	profile = ParseProfile(string(body))
+	isRestricted = IsRestricted(string(body))
+
+	return
+}
+
 func GetProfileByLocalProxy(localProxy string, username string, myClient *http.Client) (profile Profile, statusCode int, isRestricted bool, err error) {
 	client := http.Client{
 		Timeout: 5 * time.Second,
