@@ -186,6 +186,8 @@ func GetProfileByScrapeDo(username string, start int64) (profile Profile, status
 		return
 	}
 
+	log.Println(end-start, " second")
+
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
