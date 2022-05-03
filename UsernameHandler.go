@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
+	"gitlab.com/ariefhidayatulloh/easy-ig/private"
 )
 
 type Instagram struct {
@@ -123,10 +124,10 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 	// 	profile, statusCode, isRestricted, err = instagram.GetProfileByScrapeDo(username, start)
 	// }
 
-	// profile, err = private.GetProfile(username)
-	// if profile.IsExist == "no" {
-	// 	statusCode = 404
-	// }
+	profile, err = private.GetProfile(username)
+	if profile.IsExist == "no" {
+		statusCode = 404
+	}
 
 	maxTry = 1
 	if config.Proxy == "" {
