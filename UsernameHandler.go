@@ -114,6 +114,9 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 			clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
 			return
 		}
+		if profile.Username != "" {
+			return
+		}
 	}
 
 	if config.LocalProxy != "" && _GET(r, "no_proxy") == "1" {
