@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"gitlab.com/ariefhidayatulloh/easy-ig/ariefjson"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
 
@@ -58,11 +59,19 @@ func GetProfile(username string) (profile instagram.Profile, err error) {
 		rowMedia.VideoView = int(v.ViewCount)
 		totalVideoView += rowMedia.VideoView
 
+		rowMedia.Comment = v.CommentCount
+		totalComment += rowMedia.Comment
+
 		rowMedia.Caption = v.Caption.Text
 		rowMedia.Username = v.User.Username
 		rowMedia.UserID = fmt.Sprint(v.User.Pk)
 		rowMedia.ProfilePicURL = v.User.ProfilePicUrl
-		rowMedia.DisplayURL = v.CoverMedia.FullImageVersion.Url
+		if v.ImageVersions2 != nil {
+			rowMedia.DisplayURL = v.ImageVersions2.Candidates[0].Url
+		}
+		// v.Mediat
+		fmt.Println(ariefjson.MarshalIndent(v))
+		// rowMedia.DisplayURL = v.CoverMedia.FullImageVersion.Url
 		// xx:=v.Media.Image
 
 		// mediaInfo, _ := ig.Media.GetInfo(v.Pk)
@@ -74,32 +83,32 @@ func GetProfile(username string) (profile instagram.Profile, err error) {
 		// 		}
 		// 	}
 
-		// 	switch med.MediaType {
-		// 	case 2:
-		// 		rowMedia.IsVideo = true
-		// 		if med.VideoVersions != nil {
-		// 			versions := *med.VideoVersions
-		// 			rowMedia.VideoURL = versions[0].Url
-		// 		}
-		// 		break
-		// 	case 8:
-		// 		rowMedia.IsCarousel = true
-		// 		rowCarousel := instagram.CarouselPost{}
-		// 		for _, carousel := range med.CarouselMedia {
-		// 			rowCarousel.ID = fmt.Sprint(carousel.Pk)
-		// 			rowCarousel.AccessibilityCaption = ""
-		// 			if carousel.ImageVersions2 != nil {
-		// 				if len(carousel.ImageVersions2.Candidates) > 0 {
-		// 					rowCarousel.DisplayUrl = carousel.ImageVersions2.Candidates[0].Url
-		// 					rowCarousel.Dimensions.Height = carousel.ImageVersions2.Candidates[0].Height
-		// 					rowCarousel.Dimensions.Width = carousel.ImageVersions2.Candidates[0].Width
-		// 				}
-		// 			}
-		// 			rowCarousel.ShortCode = carousel.Id
+		switch v.MediaType {
+		case 2:
+			rowMedia.IsVideo = true
+			if v.VideoVersions != nil {
+				versions := *v.VideoVersions
+				rowMedia.VideoURL = versions[0].Url
+			}
+			break
+		case 8:
+			rowMedia.IsCarousel = true
+			rowCarousel := instagram.CarouselPost{}
+			for _, carousel := range v.CarouselMedia {
+				rowCarousel.ID = fmt.Sprint(carousel.Pk)
+				rowCarousel.AccessibilityCaption = ""
+				if carousel.ImageVersions2 != nil {
+					if len(carousel.ImageVersions2.Candidates) > 0 {
+						rowCarousel.DisplayUrl = carousel.ImageVersions2.Candidates[0].Url
+						rowCarousel.Dimensions.Height = carousel.ImageVersions2.Candidates[0].Height
+						rowCarousel.Dimensions.Width = carousel.ImageVersions2.Candidates[0].Width
+					}
+				}
+				rowCarousel.ShortCode = carousel.Id
 
-		// 		}
-		// 		rowMedia.CarouselPosts = append(rowMedia.CarouselPosts, rowCarousel)
-		// 	}
+			}
+			rowMedia.CarouselPosts = append(rowMedia.CarouselPosts, rowCarousel)
+		}
 		// }
 
 		// totalComment += rowMedia.Comment
