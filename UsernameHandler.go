@@ -133,10 +133,6 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 
 		log.Println("Trying using proxy ", try, "username", username)
 
-		if try > maxTry {
-			break
-		}
-
 		if os.Getenv("SCRAPERAPI") != "" {
 			profile, statusCode, isRestricted, err = instagram.GetProfileByScraperAPI(username)
 		} else {
@@ -146,14 +142,22 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 			log.Println(err)
 		}
 		try++
+		if try >= maxTry {
+			break
+		}
 
 	}
 
 	if profile.Username == "" && statusCode != 404 && !isRestricted {
+		log.Println("Using private API to get Profile ", username)
 		profile, err = private.GetProfile(username)
+		if err != nil {
+			log.Println(err, "error get profile")
+		}
 		if profile.IsExist == "no" {
 			statusCode = 404
 		}
+
 	}
 
 	// http://api.scrape.do/?token=aa6119eab8424ca5b38c404b2cd1ebed5090de0e2d5&url=https://www.instagram.com/maroon5/?__a=1
