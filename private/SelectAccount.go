@@ -14,6 +14,10 @@ func SelectAccount() (ig *gista.Instagram, err error) {
 		Password string
 	}{
 		{
+			"jastip_by_vininstore",
+			"Indonesia1",
+		},
+		{
 			"arief_hidayatulloh",
 			"Indonesia1",
 		},

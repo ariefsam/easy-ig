@@ -155,7 +155,9 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 			log.Println(err, "error get profile")
 		}
 		if profile.IsExist == "no" {
+			clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
 			statusCode = 404
+			return
 		}
 
 	}
