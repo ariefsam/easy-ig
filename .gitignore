@@ -3,3 +3,4 @@ easy-ig
 .env
 google.json
 /tmp
+/sessions

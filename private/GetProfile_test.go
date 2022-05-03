@@ -1,12 +1,10 @@
 package private_test
 
 import (
-	"fmt"
 	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"gitlab.com/ariefhidayatulloh/easy-ig/ariefjson"
 	"gitlab.com/ariefhidayatulloh/easy-ig/private"
 )
 
@@ -37,7 +35,7 @@ func TestGetProfile(t *testing.T) {
 
 	assert.NotEmpty(t, profile.LastPost)
 
-	js := ariefjson.Marshal(profile)
-	fmt.Println(js)
+	// js := ariefjson.Marshal(profile)
+	// fmt.Println(js)
 
 }

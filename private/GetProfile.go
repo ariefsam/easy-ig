@@ -94,6 +94,7 @@ func GetProfile(username string) (profile instagram.Profile, err error) {
 							rowCarousel.Dimensions.Width = carousel.ImageVersions2.Candidates[0].Width
 						}
 					}
+					rowCarousel.ShortCode = carousel.Id
 
 				}
 				rowMedia.CarouselPosts = append(rowMedia.CarouselPosts, rowCarousel)
@@ -101,7 +102,7 @@ func GetProfile(username string) (profile instagram.Profile, err error) {
 		}
 
 		totalComment += rowMedia.Comment
-		if rowMedia.Shortcode == "CcJDH9rvIw6" {
+		if rowMedia.Shortcode == "Cb0MToFrrWN" {
 			fmt.Println(ariefjson.Marshal(mediaInfo))
 		}
 
