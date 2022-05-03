@@ -117,9 +117,9 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 		log.Println("local proxy set, but no proxy choose")
 	}
 
-	if profile.Username == "" && statusCode != 404 && !isRestricted {
-		profile, statusCode, isRestricted, err = instagram.GetProfileByScrapeDo(username, start)
-	}
+	// if profile.Username == "" && statusCode != 404 && !isRestricted {
+	// 	profile, statusCode, isRestricted, err = instagram.GetProfileByScrapeDo(username, start)
+	// }
 
 	maxTry = 1
 	if config.Proxy == "" {
@@ -128,7 +128,7 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 
 	for profile.Username == "" && statusCode != 404 && !isRestricted {
 
-		log.Println("Trying using proxy ", try)
+		log.Println("Trying using proxy ", try, "username", username)
 
 		if try > maxTry {
 			break
