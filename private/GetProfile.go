@@ -15,7 +15,7 @@ func GetProfile(username string) (profile instagram.Profile, err error) {
 	}
 
 	module := "newsfeed"
-	userInfo, err := ig.People.GetInfoByName("maroon5", &module)
+	userInfo, err := ig.People.GetInfoByName(username, &module)
 	if err != nil {
 		if err.Error() == "UserInfoResponse: User Not Found" {
 			profile.IsExist = "no"

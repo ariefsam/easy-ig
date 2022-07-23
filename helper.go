@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/ariefjson"
@@ -16,5 +15,5 @@ func JSONView(w http.ResponseWriter, r *http.Request, data interface{}, statusco
 }
 
 func Log(data interface{}) {
-	log.Println(data)
+	// log.Println(data)
 }

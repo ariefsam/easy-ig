@@ -25,6 +25,10 @@ func SelectAccount() (ig *gista.Instagram, err error) {
 			"arieftoys",
 			"Indonesia1",
 		},
+		{
+			"ahmadzaani",
+			"Indonesia1",
+		},
 	}
 	if len(accounts) == 0 {
 		return

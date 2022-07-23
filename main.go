@@ -3,15 +3,19 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
 )
 
 var router *mux.Router
+var start int64
 
 func main() {
+	start = time.Now().Unix()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.SetOutput(os.Stdout)
 	config = LoadConfig()
 	log.Printf("%+v", config)
 	router = mux.NewRouter()

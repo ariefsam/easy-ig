@@ -1,15 +1,13 @@
 package main
 
 import (
-	"crypto/tls"
 	"errors"
 	"log"
 	"net/http"
-	"net/url"
-	"os"
 	"time"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
+	"gitlab.com/ariefhidayatulloh/easy-ig/private"
 )
 
 type Instagram struct {
@@ -78,30 +76,31 @@ type TaggedUser struct {
 	ProfilePicUrl string `json:"profile_pic_url"`
 }
 
-var privateLastHit int
+var privateLastHit int64
 
 func getIgProfile(r *http.Request, username string) (profile instagram.Profile, clientError map[string]string, systemError error) {
-	start := time.Now().Unix()
-	if username == "explore" {
-		clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
-		return
-	}
-	myClient := &http.Client{}
-	if config.Proxy != "" {
-		proxyURL, _ := url.Parse(config.Proxy)
-		myClient = &http.Client{
-			Transport: &http.Transport{
-				Proxy:                 http.ProxyURL(proxyURL),
-				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-				ResponseHeaderTimeout: time.Second * 45,
-			},
-			Timeout: time.Second * 45,
-		}
+	// start := time.Now().Unix()
+	// if username == "explore" {
+	// 	clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
+	// 	return
+	// }
+	// myClient := &http.Client{}
+	// if config.Proxy != "" {
+	// 	proxyURL, _ := url.Parse(config.Proxy)
+	// 	myClient = &http.Client{
+	// 		Transport: &http.Transport{
+	// 			Proxy:                 http.ProxyURL(proxyURL),
+	// 			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+	// 			ResponseHeaderTimeout: time.Second * 45,
+	// 		},
+	// 		Timeout: time.Second * 45,
+	// 	}
 
-		log.Println("Using proxy: ", proxyURL)
-	}
+	// 	log.Println("Using proxy: ", proxyURL)
+	// }
 
-	var try, maxTry, statusCode int
+	// var try, maxTry int
+	var statusCode int
 	var isRestricted bool
 	var err error
 
@@ -126,43 +125,48 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 	// 	profile, statusCode, isRestricted, err = instagram.GetProfileByScrapeDo(username, start)
 	// }
 
-	maxTry = 1
-	if config.Proxy == "" {
-		maxTry = 2
-	}
+	// maxTry = 1
+	// if config.Proxy == "" {
+	// 	maxTry = 1
+	// }
 
-	for profile.Username == "" && statusCode != 404 && !isRestricted {
+	// for profile.Username == "" && statusCode != 404 && !isRestricted {
 
-		log.Println("Trying using proxy ", try, "username", username)
+	// 	log.Println("Trying using proxy ", try, "username", username)
 
-		if os.Getenv("SCRAPERAPI") != "" {
-			profile, statusCode, isRestricted, err = instagram.GetProfileByScraperAPI(username)
-		} else {
-			profile, statusCode, isRestricted, err = instagram.GetProfile(username, myClient, start)
-		}
-		if err != nil {
-			log.Println(err)
-		}
-		try++
-		if try >= maxTry {
-			break
-		}
-
-	}
-
-	// if profile.Username == "" && statusCode != 404 && !isRestricted {
-	// 	log.Println("Using private API to get Profile ", username)
-	// 	profile, err = private.GetProfile(username)
-	// 	if err != nil {
-	// 		log.Println(err, "error get profile")
+	// 	if os.Getenv("SCRAPERAPI") != "" {
+	// 		profile, statusCode, isRestricted, err = instagram.GetProfileByScraperAPI(username)
+	// 	} else {
+	// 		profile, statusCode, isRestricted, err = instagram.GetProfile(username, myClient, start)
 	// 	}
-	// 	if profile.IsExist == "no" {
-	// 		clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
-	// 		statusCode = 404
-	// 		return
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 	}
+	// 	try++
+	// 	if try >= maxTry {
+	// 		break
 	// 	}
 
 	// }
+
+	if profile.Username == "" && statusCode != 404 && !isRestricted && time.Now().Unix()-privateLastHit > 10 {
+		log.Println("Using private API to get Profile ", username)
+		privateLastHit = time.Now().Unix()
+		profile, err = private.GetProfile(username)
+		if err != nil {
+			log.Println(err, "error get profile")
+			if err.Error() == "UserInfoResponse: User Not Found." {
+				statusCode = 404
+				profile.IsExist = "no"
+			}
+		}
+		if profile.IsExist == "no" {
+			clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
+			statusCode = 404
+			return
+		}
+
+	}
 
 	// http://api.scrape.do/?token=aa6119eab8424ca5b38c404b2cd1ebed5090de0e2d5&url=https://www.instagram.com/maroon5/?__a=1
 
