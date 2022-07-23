@@ -15,9 +15,9 @@ func TestSelectAccount(t *testing.T) {
 		ig, err := private.SelectAccount()
 		assert.NoError(t, err)
 		assert.NotNil(t, ig.Account)
-		cur, err := ig.Account.GetCurrentUser()
-		assert.NoError(t, err)
-		log.Println(ariefjson.Marshal(cur.User.Username))
+		cur := ig.Account
+		assert.NotNil(t, cur)
+		log.Println(ariefjson.Marshal(cur.Username))
 		time.Sleep(1 * time.Second)
 	}
 }

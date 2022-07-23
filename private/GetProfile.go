@@ -14,46 +14,53 @@ func GetProfile(username string) (profile instagram.Profile, err error) {
 		return
 	}
 
-	module := "newsfeed"
-	userInfo, err := ig.People.GetInfoByName(username, &module)
+	// log.Println(ariefjson.MarshalIndent(ig))
+
+	// module := "newsfeed"
+	if ig.Profiles == nil {
+		return
+	}
+
+	userInfo, err := ig.Profiles.ByName(username)
 	if err != nil {
-		if err.Error() == "UserInfoResponse: User Not Found" {
-			profile.IsExist = "no"
+		if err.Error() == "UserInfoResponse: Challenge required." {
+			log.Println("got here")
 		}
 		return
 	}
-	profile.FullName = userInfo.User.FullName
-	profile.ID = fmt.Sprint(userInfo.User.Pk)
-	profile.Biography = userInfo.User.Biography
-	profile.Username = userInfo.User.Username
-	profile.IsPrivate = userInfo.User.IsPrivate
-	profile.ExternalURL = userInfo.User.ExternalUrl
-	profile.ProfilePicUrl = userInfo.User.ProfilePicUrl
-	profile.Following = userInfo.User.FollowingCount
-	profile.Follower = userInfo.User.FollowerCount
-	profile.TotalPost = userInfo.User.MediaCount
+
+	// log.Println(sInfo.)
+	profile.FullName = userInfo.FullName
+	profile.ID = fmt.Sprint(userInfo.ID)
+	profile.Biography = userInfo.Biography
+	profile.Username = userInfo.Username
+	profile.IsPrivate = userInfo.IsPrivate
+	profile.ExternalURL = userInfo.ExternalURL
+	profile.ProfilePicUrl = userInfo.ProfilePicURL
+	profile.Following = userInfo.FollowingCount
+	profile.Follower = userInfo.FollowerCount
+	profile.TotalPost = userInfo.MediaCount
 	// louserInfo.User.LatestReelMedia
 
-	feed, err := ig.Timeline.GetUserFeed(userInfo.User.Pk, nil)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	feed := userInfo.Feed() // ig.P .Timeline. .GetUserFeed(userInfo.User.Pk, nil)
+	feed.Next()
+	// log.Println(ariefjson.MarshalIndent(userInfo))
+	// log.Println(ariefjson.MarshalIndent(feed))
 	if feed.Items == nil {
 		return
 	}
 
 	var totalLastPost, totalLike, totalComment, totalVideoView int
 
-	for _, v := range *feed.Items {
+	for _, v := range feed.Items {
 		// if totalLastPost == 12 {
 		// 	continue
 		// }
 		totalLastPost++
 		rowMedia := instagram.InstagramPost{}
-		rowMedia.ID = fmt.Sprint(v.Id)
+		rowMedia.ID = fmt.Sprint(v.ID)
 		rowMedia.Shortcode = v.Code
-		rowMedia.Like = v.LikeCount
+		rowMedia.Like = v.Likes
 		totalLike += rowMedia.Like
 
 		rowMedia.VideoView = int(v.ViewCount)
@@ -64,11 +71,12 @@ func GetProfile(username string) (profile instagram.Profile, err error) {
 
 		rowMedia.Caption = v.Caption.Text
 		rowMedia.Username = v.User.Username
-		rowMedia.UserID = fmt.Sprint(v.User.Pk)
-		rowMedia.ProfilePicURL = v.User.ProfilePicUrl
-		if v.ImageVersions2 != nil {
-			rowMedia.DisplayURL = v.ImageVersions2.Candidates[0].Url
-		}
+		rowMedia.UserID = fmt.Sprint(v.User.ID)
+		rowMedia.ProfilePicURL = v.User.ProfilePicURL
+		// if v.ImageVersions2 != nil {
+		// 	rowMedia.DisplayURL = v.ImageVersions2.Candidates[0].Url
+		// }
+		rowMedia.DisplayURL = v.Images.GetBest()
 		// v.Mediat
 		fmt.Println(ariefjson.MarshalIndent(v))
 		// rowMedia.DisplayURL = v.CoverMedia.FullImageVersion.Url
@@ -86,9 +94,9 @@ func GetProfile(username string) (profile instagram.Profile, err error) {
 		switch v.MediaType {
 		case 2:
 			rowMedia.IsVideo = true
-			if v.VideoVersions != nil {
-				versions := *v.VideoVersions
-				rowMedia.VideoURL = versions[0].Url
+
+			if len(v.Videos) > 0 {
+				rowMedia.VideoURL = v.Videos[0].URL
 			}
 			break
 		case 8:
@@ -97,14 +105,17 @@ func GetProfile(username string) (profile instagram.Profile, err error) {
 			for _, carousel := range v.CarouselMedia {
 				rowCarousel.ID = fmt.Sprint(carousel.Pk)
 				rowCarousel.AccessibilityCaption = ""
-				if carousel.ImageVersions2 != nil {
-					if len(carousel.ImageVersions2.Candidates) > 0 {
-						rowCarousel.DisplayUrl = carousel.ImageVersions2.Candidates[0].Url
-						rowCarousel.Dimensions.Height = carousel.ImageVersions2.Candidates[0].Height
-						rowCarousel.Dimensions.Width = carousel.ImageVersions2.Candidates[0].Width
-					}
+				if len(carousel.Images.Versions) > 0 {
+					rowCarousel.DisplayUrl = carousel.Images.Versions[0].URL
+					rowCarousel.Dimensions.Width = carousel.Images.Versions[0].Width
+					rowCarousel.Dimensions.Height = carousel.Images.Versions[0].Height
+					// if len(carousel.ImageVersions2.Candidates) > 0 {
+					// 	rowCarousel.DisplayUrl = carousel.ImageVersions2.Candidates[0].Url
+					// 	rowCarousel.Dimensions.Height = carousel.ImageVersions2.Candidates[0].Height
+					// 	rowCarousel.Dimensions.Width = carousel.ImageVersions2.Candidates[0].Width
+					// }
 				}
-				rowCarousel.ShortCode = carousel.Id
+				rowCarousel.ShortCode = carousel.ID
 
 			}
 			rowMedia.CarouselPosts = append(rowMedia.CarouselPosts, rowCarousel)
