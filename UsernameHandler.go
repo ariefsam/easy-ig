@@ -149,7 +149,7 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 
 	// }
 
-	if profile.Username == "" && statusCode != 404 && !isRestricted && time.Now().Unix()-privateLastHit > 10 {
+	if profile.Username == "" && statusCode != 404 && !isRestricted && time.Now().Unix()-privateLastHit > 1000000 {
 		log.Println("Using private API to get Profile ", username)
 		privateLastHit = time.Now().Unix()
 		profile, err = private.GetProfile(username)
