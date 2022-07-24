@@ -4,10 +4,8 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"time"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
-	"gitlab.com/ariefhidayatulloh/easy-ig/private"
 )
 
 type Instagram struct {
@@ -149,22 +147,23 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 
 	// }
 
-	if profile.Username == "" && statusCode != 404 && !isRestricted && time.Now().Unix()-privateLastHit > 30 {
-		log.Println("Using private API to get Profile ", username)
-		privateLastHit = time.Now().Unix()
-		profile, err = private.GetProfile(username)
-		if err != nil {
-			log.Println(err, "error get profile")
-		}
-		if profile.IsExist == "no" {
-			clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
-			statusCode = 404
-			return
-		}
+	// if profile.Username == "" && statusCode != 404 && !isRestricted && time.Now().Unix()-privateLastHit > 30 {
+	// 	log.Println("Using private API to get Profile ", username)
+	// 	privateLastHit = time.Now().Unix()
+	// 	profile, err = private.GetProfile(username)
+	// 	if err != nil {
+	// 		log.Println(err, "error get profile")
+	// 	}
+	// 	if profile.IsExist == "no" {
+	// 		clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
+	// 		statusCode = 404
+	// 		return
+	// 	}
 
-	}
+	// }
 
 	// http://api.scrape.do/?token=aa6119eab8424ca5b38c404b2cd1ebed5090de0e2d5&url=https://www.instagram.com/maroon5/?__a=1
+	log.Println(err)
 
 	if statusCode == 404 {
 		clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
