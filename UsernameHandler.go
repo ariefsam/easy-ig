@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"time"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
@@ -164,7 +165,7 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 
 	// http://api.scrape.do/?token=aa6119eab8424ca5b38c404b2cd1ebed5090de0e2d5&url=https://www.instagram.com/maroon5/?__a=1
 	log.Println(err)
-
+	time.Sleep(30 * time.Second)
 	if statusCode == 404 {
 		clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
 		return
