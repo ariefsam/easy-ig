@@ -1,9 +1,12 @@
 package main
 
 import (
+	"crypto/tls"
 	"errors"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
 	"time"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
@@ -78,27 +81,27 @@ type TaggedUser struct {
 var privateLastHit int64
 
 func getIgProfile(r *http.Request, username string) (profile instagram.Profile, clientError map[string]string, systemError error) {
-	// start := time.Now().Unix()
-	// if username == "explore" {
-	// 	clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
-	// 	return
-	// }
-	// myClient := &http.Client{}
-	// if config.Proxy != "" {
-	// 	proxyURL, _ := url.Parse(config.Proxy)
-	// 	myClient = &http.Client{
-	// 		Transport: &http.Transport{
-	// 			Proxy:                 http.ProxyURL(proxyURL),
-	// 			TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-	// 			ResponseHeaderTimeout: time.Second * 45,
-	// 		},
-	// 		Timeout: time.Second * 45,
-	// 	}
+	start := time.Now().Unix()
+	if username == "explore" {
+		clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
+		return
+	}
+	myClient := &http.Client{}
+	if config.Proxy != "" {
+		proxyURL, _ := url.Parse(config.Proxy)
+		myClient = &http.Client{
+			Transport: &http.Transport{
+				Proxy:                 http.ProxyURL(proxyURL),
+				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+				ResponseHeaderTimeout: time.Second * 45,
+			},
+			Timeout: time.Second * 45,
+		}
 
-	// 	log.Println("Using proxy: ", proxyURL)
-	// }
+		log.Println("Using proxy: ", proxyURL)
+	}
 
-	// var try, maxTry int
+	var try, maxTry int
 	var statusCode int
 	var isRestricted bool
 	var err error
@@ -120,33 +123,33 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 		log.Println("local proxy set, but no proxy choose")
 	}
 
-	// if profile.Username == "" && statusCode != 404 && !isRestricted {
-	// 	profile, statusCode, isRestricted, err = instagram.GetProfileByScrapeDo(username, start)
-	// }
+	if profile.Username == "" && statusCode != 404 && !isRestricted {
+		profile, statusCode, isRestricted, err = instagram.GetProfileByScrapeDo(username, start)
+	}
 
-	// maxTry = 1
-	// if config.Proxy == "" {
-	// 	maxTry = 1
-	// }
+	maxTry = 4
+	if config.Proxy == "" {
+		maxTry = 1
+	}
 
-	// for profile.Username == "" && statusCode != 404 && !isRestricted {
+	for profile.Username == "" && statusCode != 404 && !isRestricted {
 
-	// 	log.Println("Trying using proxy ", try, "username", username)
+		log.Println("Trying using proxy ", try, "username", username)
 
-	// 	if os.Getenv("SCRAPERAPI") != "" {
-	// 		profile, statusCode, isRestricted, err = instagram.GetProfileByScraperAPI(username)
-	// 	} else {
-	// 		profile, statusCode, isRestricted, err = instagram.GetProfile(username, myClient, start)
-	// 	}
-	// 	if err != nil {
-	// 		log.Println(err)
-	// 	}
-	// 	try++
-	// 	if try >= maxTry {
-	// 		break
-	// 	}
+		if os.Getenv("SCRAPERAPI") != "" {
+			profile, statusCode, isRestricted, err = instagram.GetProfileByScraperAPI(username)
+		} else {
+			profile, statusCode, isRestricted, err = instagram.GetProfile(username, myClient, start)
+		}
+		if err != nil {
+			log.Println(err)
+		}
+		try++
+		if try >= maxTry {
+			break
+		}
 
-	// }
+	}
 
 	// if profile.Username == "" && statusCode != 404 && !isRestricted && time.Now().Unix()-privateLastHit > 30 {
 	// 	log.Println("Using private API to get Profile ", username)
@@ -165,7 +168,7 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 
 	// http://api.scrape.do/?token=aa6119eab8424ca5b38c404b2cd1ebed5090de0e2d5&url=https://www.instagram.com/maroon5/?__a=1
 	log.Println(err)
-	time.Sleep(30 * time.Second)
+
 	if statusCode == 404 {
 		clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
 		return
@@ -177,6 +180,7 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 	}
 
 	if profile.Username == "" {
+		time.Sleep(30 * time.Second)
 		systemError = errors.New("We were sorry, our request blocked by Instagram. Your RapidAPI quota or overage will not be reduced. Please try again, we will try another IP Address.")
 		return
 	}
