@@ -19,7 +19,7 @@ func GetPostByShortcodeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	urlPost := "https://www.instagram.com/p/" + shortcode + "?__a=1"
+	urlPost := "https://www.instagram.com/p/" + shortcode + "?__a=1&__d=dis"
 
 	myClient := &http.Client{}
 	if config.Proxy != "" {
