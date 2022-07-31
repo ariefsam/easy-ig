@@ -135,6 +135,7 @@ func GetProfile(username string, myClient *http.Client, start int64) (profile Pr
 	address := "https://www.instagram.com/" + username + "/?__a=1&__d=dis"
 	resp, err := myClient.Get(address)
 	if err != nil {
+		log.Println(err.Error())
 		return
 	}
 
@@ -155,7 +156,7 @@ func GetProfile(username string, myClient *http.Client, start int64) (profile Pr
 	if err != nil {
 		return
 	}
-	log.Println(string(body))
+	// log.Println(string(body))
 
 	profile = ParseProfile(string(body))
 	isRestricted = IsRestricted(string(body))
@@ -176,7 +177,7 @@ func GetProfileByScrapeDo(username string, start int64) (profile Profile, status
 
 	statusCode = resp.StatusCode
 
-	log.Println(resp.StatusCode)
+	// log.Println(resp.StatusCode)
 	if statusCode != 200 {
 		return
 	}
@@ -193,7 +194,7 @@ func GetProfileByScrapeDo(username string, start int64) (profile Profile, status
 	if err != nil {
 		return
 	}
-	log.Println(string(body))
+	// log.Println(string(body))
 
 	profile = ParseProfile(string(body))
 	isRestricted = IsRestricted(string(body))

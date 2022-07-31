@@ -166,7 +166,7 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 	// }
 
 	// http://api.scrape.do/?token=aa6119eab8424ca5b38c404b2cd1ebed5090de0e2d5&url=https://www.instagram.com/maroon5/?__a=1
-	log.Println(err)
+	// log.Println(err)
 
 	if statusCode == 404 {
 		clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
@@ -184,7 +184,7 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 		//systemError = errors.New("We were sorry, our request blocked by Instagram. Your RapidAPI quota or overage will not be reduced. Please try again, we will try another IP Address.")
 		return
 	}
-	log.Println(username, profile.Follower)
+	log.Println(statusCode, username, profile.Follower)
 	return
 }
 
