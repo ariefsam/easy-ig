@@ -92,9 +92,9 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 			Transport: &http.Transport{
 				Proxy:                 http.ProxyURL(proxyURL),
 				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
-				ResponseHeaderTimeout: time.Second * 45,
+				ResponseHeaderTimeout: time.Second * 100,
 			},
-			Timeout: time.Second * 45,
+			Timeout: time.Second * 100,
 		}
 
 		log.Println("Using proxy: ", proxyURL)
