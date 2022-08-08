@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
@@ -179,9 +180,9 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 	}
 
 	if profile.Username == "" {
-		clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
-		// time.Sleep(30 * time.Second)
-		//systemError = errors.New("We were sorry, our request blocked by Instagram. Your RapidAPI quota or overage will not be reduced. Please try again, we will try another IP Address.")
+		// clientError = map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}
+		time.Sleep(30 * time.Second)
+		systemError = errors.New("We were sorry, our request blocked by Instagram. Your RapidAPI quota or overage will not be reduced. Please try again, we will try another IP Address.")
 		return
 	}
 	log.Println(statusCode, username, profile.Follower)
