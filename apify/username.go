@@ -1,6 +1,7 @@
 package apify
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"time"
@@ -34,9 +35,9 @@ func usernameWorker() {
 	waiters := []responseUsername{}
 	username := map[string]bool{}
 
-	tick := time.Tick(5 * time.Second)
 	for {
 		var mustRun bool
+		ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
 		select {
 		case input := <-inputChan:
 			log.Println("input", input)
@@ -46,7 +47,7 @@ func usernameWorker() {
 			if len(username) >= 20 {
 				mustRun = true
 			}
-		case <-tick:
+		case <-ctx.Done():
 			log.Println("tick")
 			mustRun = true
 		}
