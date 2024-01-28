@@ -25,7 +25,7 @@ type responseUsername struct {
 	wait chan instagram.Profile
 }
 
-var inputChan = make(chan responseUsername)
+var inputChan = make(chan responseUsername, 100000)
 
 func init() {
 	go usernameWorker()

@@ -13,6 +13,7 @@ var router *mux.Router
 var start int64
 
 func main() {
+	log.Default().SetFlags(log.LstdFlags | log.Lshortfile)
 	start = time.Now().Unix()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.SetOutput(os.Stdout)
