@@ -64,34 +64,43 @@ func usernameWorker() {
 		for k := range username {
 			usernames = append(usernames, k)
 		}
-		log.Println("execute", usernames)
-		responseAll, err := execute(usernames)
-		if err != nil {
-			log.Println(err)
-
-		}
-		log.Println("done")
-
-		log.Println(string(responseAll))
 
 		username = map[string]bool{}
 
-		responseClean, _, err := transform(responseAll)
-		if err != nil {
-			log.Println(err)
-		}
-
-		temp, _ := json.MarshalIndent(responseClean, "", "  ")
-		log.Println(string(temp))
-
-		respByUsername := map[string]instagram.Profile{}
-		for _, v := range responseClean {
-			respByUsername[v.Username] = v
-		}
-
+		copyWaiters := []responseUsername{}
 		for _, w := range waiters {
-			w.wait <- respByUsername[w.name]
+			copyWaiters = append(copyWaiters, w)
 		}
+		waiters = []responseUsername{}
+
+		go func(waiters []responseUsername) {
+			log.Println("execute", usernames)
+			responseAll, err := execute(usernames)
+			if err != nil {
+				log.Println(err)
+
+			}
+			log.Println("done")
+
+			log.Println(string(responseAll))
+
+			responseClean, _, err := transform(responseAll)
+			if err != nil {
+				log.Println(err)
+			}
+
+			temp, _ := json.MarshalIndent(responseClean, "", "  ")
+			log.Println(string(temp))
+
+			respByUsername := map[string]instagram.Profile{}
+			for _, v := range responseClean {
+				respByUsername[v.Username] = v
+			}
+
+			for _, w := range waiters {
+				w.wait <- respByUsername[w.name]
+			}
+		}(copyWaiters)
 	}
 
 }
