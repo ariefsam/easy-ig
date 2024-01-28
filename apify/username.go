@@ -96,7 +96,7 @@ func usernameWorker() {
 
 		time.Sleep(10 * time.Millisecond)
 
-		go func(waiters []responseUsername) {
+		go func(waiters []responseUsername, usernames []string) {
 			log.Println("execute", usernames)
 			responseAll, err := execute(usernames)
 			if err != nil {
@@ -123,7 +123,7 @@ func usernameWorker() {
 			for _, w := range waiters {
 				w.wait <- respByUsername[w.name]
 			}
-		}(copyWaiters)
+		}(copyWaiters, usernames)
 	}
 
 }
