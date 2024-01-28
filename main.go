@@ -23,6 +23,7 @@ func main() {
 	router.Path("/username").HandlerFunc(UsernameHandler)
 	router.Path("/username-with-base64-image").HandlerFunc(UsernameWithBase64ImageHandler)
 	router.Path("/get-post").HandlerFunc(GetPostByShortcodeHandler)
+	router.Path("/get-post-with-base64-image").HandlerFunc(GetPostByShortcodeHandler)
 	if config.RapidApi.ProxySecret != "" {
 		router.Use(rapidApiMiddleware)
 	}

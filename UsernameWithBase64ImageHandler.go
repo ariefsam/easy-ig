@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 
+	"gitlab.com/ariefhidayatulloh/easy-ig/apify"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
 
@@ -34,6 +35,17 @@ func getIgProfileWithBase64Image(r *http.Request, username string) (p instagram.
 	return p, errClient, errSystem
 }
 
+func GetProfileBase64(input instagram.Profile) (p instagram.ProfileWithBase64Image) {
+	temp, _ := json.Marshal(input)
+	json.Unmarshal(temp, &p)
+	p.ProfilePicBase64Image, _ = getBase64Image(p.ProfilePicUrl)
+
+	for k, v := range p.LastPost {
+		p.LastPost[k].DisplayURLBase64Image, _ = getBase64Image(v.DisplayURL)
+	}
+	return
+}
+
 func getBase64Image(url string) (base64Image string, err error) {
 	imgRes, err := http.Get(url)
 	imgByte, err := ioutil.ReadAll(imgRes.Body)
@@ -57,14 +69,28 @@ func UsernameWithBase64ImageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile, errClient, errSystem := getIgProfileWithBase64Image(r, data.Username)
-	if errClient != nil {
-		JSONView(w, r, errClient, 200)
+	// profile, errClient, errSystem := getIgProfileWithBase64Image(r, data.Username)
+	// if errClient != nil {
+	// 	JSONView(w, r, errClient, 200)
+	// 	return
+	// }
+	// if errSystem != nil {
+	// 	JSONView(w, r, map[string]string{"error": errSystem.Error()}, http.StatusNotFound)
+	// 	return
+	// }
+
+	profile, err := apify.Username(data.Username)
+	if err != nil {
+		log.Println(err)
+		JSONView(w, r, map[string]string{"error": "system error"}, http.StatusInternalServerError)
+	}
+
+	if profile.IsExist == "no" {
+		JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
 		return
 	}
-	if errSystem != nil {
-		JSONView(w, r, map[string]string{"error": errSystem.Error()}, http.StatusNotFound)
-		return
-	}
-	JSONView(w, r, profile, 200)
+
+	profileWithBase64Image := GetProfileBase64(profile)
+
+	JSONView(w, r, profileWithBase64Image, 200)
 }

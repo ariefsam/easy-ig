@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"gitlab.com/ariefhidayatulloh/easy-ig/apify"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
 
@@ -198,15 +199,27 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile, errClient, errSystem := getIgProfile(r, data.Username)
-	if errClient != nil {
-		JSONView(w, r, errClient, 200)
+	// profile, errClient, errSystem := getIgProfile(r, data.Username)
+	// if errClient != nil {
+	// 	JSONView(w, r, errClient, 200)
+	// 	return
+	// }
+	// if errSystem != nil {
+	// 	JSONView(w, r, map[string]string{"error": errSystem.Error()}, http.StatusGatewayTimeout)
+	// 	return
+	// }
+
+	profile, err := apify.Username(data.Username)
+	if err != nil {
+		log.Println(err)
+		JSONView(w, r, map[string]string{"error": "system error"}, http.StatusInternalServerError)
+	}
+
+	if profile.IsExist == "no" {
+		JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
 		return
 	}
-	if errSystem != nil {
-		JSONView(w, r, map[string]string{"error": errSystem.Error()}, http.StatusGatewayTimeout)
-		return
-	}
+
 	JSONView(w, r, profile, 200)
 
 	return

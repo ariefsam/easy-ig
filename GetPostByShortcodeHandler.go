@@ -44,3 +44,41 @@ func GetPostByShortcodeHandler(w http.ResponseWriter, r *http.Request) {
 
 	JSONView(w, r, data, http.StatusOK)
 }
+
+func GetPostByShortcodeBase64Handler(w http.ResponseWriter, r *http.Request) {
+
+	var data instagram.InstagramPost
+	shortcode := _GET(r, "shortcode")
+
+	if len(shortcode) < 5 {
+		return
+	}
+
+	urlPost := "https://www.instagram.com/p/" + shortcode + "?__a=1&__d=dis"
+
+	myClient := &http.Client{}
+	if config.Proxy != "" {
+		proxyURL, _ := url.Parse(config.Proxy)
+		myClient = &http.Client{
+			Transport: &http.Transport{
+				Proxy:           http.ProxyURL(proxyURL),
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		}
+
+		log.Println("Using proxy: ", proxyURL)
+	}
+
+	resp, err := myClient.Get(urlPost)
+	if err != nil {
+		log.Println(err)
+	}
+	defer resp.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	data = instagram.ParsePost(string(body))
+	dataPost := instagram.InstagramPostWithBase64Image{}
+	dataPost.InstagramPost = data
+	dataPost.DisplayURLBase64Image, _ = getBase64Image(data.DisplayURL)
+
+	JSONView(w, r, dataPost, http.StatusOK)
+}

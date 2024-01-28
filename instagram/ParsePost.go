@@ -2,7 +2,6 @@ package instagram
 
 import (
 	"encoding/json"
-	"time"
 )
 
 type UserPage struct {
@@ -130,8 +129,8 @@ func (node *PostNode) ToAccountPost() InstagramPost {
 	post.IsVideo = node.IsVideo
 	post.Username = node.Owner.Username
 	post.UserID = node.Owner.Id
-	t := time.Now()
-	post.LastUpdate = t.Format(time.RFC3339)
+	// t := time.Now()
+	// post.LastUpdate = t.Format(time.RFC3339)
 	if len(node.EdgeSidecarToChildren.Edges) > 0 {
 		post.IsCarousel = true
 		for _, val := range node.EdgeSidecarToChildren.Edges {
