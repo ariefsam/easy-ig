@@ -58,8 +58,16 @@ func (a apifyResponse) ToProfile() instagram.Profile {
 
 	for _, v := range a.LatestPosts {
 		post := getPost(v)
+		resp.Like = resp.Like + post.Like
+		resp.Comment = resp.Comment + post.Comment
+		resp.VideoView = resp.VideoView + post.VideoView
 		resp.LastPost = append(resp.LastPost, post)
+	}
 
+	if len(a.LatestPosts) > 0 {
+		resp.AverageLike = resp.Like / len(a.LatestPosts)
+		resp.AverageComment = resp.Comment / len(a.LatestPosts)
+		resp.AverageVideoView = resp.VideoView / len(a.LatestPosts)
 	}
 
 	for _, v := range a.LatestIgtvVideos {
