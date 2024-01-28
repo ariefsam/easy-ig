@@ -55,10 +55,10 @@ func init() {
 func usernameWorker() {
 	waiters := []responseUsername{}
 	username := map[string]bool{}
-
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
 	for {
 		var mustRun bool
-		ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+
 		select {
 		case input := <-inputChan:
 			log.Println("input", input)
@@ -71,6 +71,7 @@ func usernameWorker() {
 		case <-ctx.Done():
 			log.Println("tick")
 			mustRun = true
+			ctx, _ = context.WithTimeout(context.Background(), time.Second*10)
 		}
 
 		if len(username) == 0 {
