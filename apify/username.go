@@ -65,7 +65,7 @@ func usernameWorker() {
 			waiters = append(waiters, input)
 
 			username[input.name] = true
-			if len(username) >= 20 {
+			if len(waiters) >= 20 {
 				mustRun = true
 			}
 		case <-ctx.Done():
