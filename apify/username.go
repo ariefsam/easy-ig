@@ -93,6 +93,8 @@ func usernameWorker() {
 		}
 		waiters = []responseUsername{}
 
+		time.Sleep(10 * time.Millisecond)
+
 		go func(waiters []responseUsername) {
 			log.Println("execute", usernames)
 			responseAll, err := execute(usernames)
