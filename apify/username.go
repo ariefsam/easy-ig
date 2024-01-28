@@ -6,10 +6,30 @@ import (
 	"log"
 	"time"
 
+	"github.com/patrickmn/go-cache"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
 
+var c = cache.New(5*time.Minute, 10*time.Minute)
+
 func Username(username string) (data instagram.Profile, err error) {
+	if v, ok := c.Get(username); ok {
+		data = v.(instagram.Profile)
+		return
+	}
+
+	data, err = UsernameWithoutCache(username)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	c.Set(username, data, cache.DefaultExpiration)
+
+	return
+}
+
+func UsernameWithoutCache(username string) (data instagram.Profile, err error) {
 	wait := make(chan instagram.Profile)
 	inputChan <- responseUsername{
 		name: username,
