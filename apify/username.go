@@ -15,6 +15,7 @@ var c = cache.New(5*time.Minute, 10*time.Minute)
 func Username(username string) (data instagram.Profile, err error) {
 	if v, ok := c.Get(username); ok {
 		data = v.(instagram.Profile)
+		log.Println("from cache", username)
 		return
 	}
 
