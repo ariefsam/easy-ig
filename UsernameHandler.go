@@ -11,6 +11,7 @@ import (
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/apify"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
+	"gitlab.com/ariefhidayatulloh/easy-ig/webprofile"
 )
 
 type Instagram struct {
@@ -191,6 +192,36 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 }
 
 func UsernameHandler(w http.ResponseWriter, r *http.Request) {
+
+	var data Instagram
+	data.Username = _GET(r, "username")
+	if data.Username == "" {
+		JSONView(w, r, nil, http.StatusBadRequest)
+		return
+	}
+
+	rawUser, statusCode, isRestricted, err := webprofile.GetWebProfile(data.Username)
+	if err != nil {
+		log.Println(err)
+		JSONView(w, r, map[string]string{"error": "system error"}, http.StatusInternalServerError)
+		return
+	}
+
+	if isRestricted {
+		JSONView(w, r, map[string]string{"client_error": "Profile restricted for 18+, Our API is public app, so we cannot read restricted profile without login. Your RapidAPI quota still reduced."}, 200)
+		return
+	}
+
+	if statusCode == 404 {
+		JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
+		return
+	}
+	JSONView(w, r, rawUser, 200)
+	return
+
+}
+
+func UsernameHandlerApify(w http.ResponseWriter, r *http.Request) {
 
 	var data Instagram
 	data.Username = _GET(r, "username")

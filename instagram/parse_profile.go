@@ -9,6 +9,12 @@ func ParseProfile(html string) (profile Profile) {
 	json.Unmarshal([]byte(html), &page)
 
 	data := page.Graphql.User
+	profile = ParseRawUser(data)
+
+	return
+}
+
+func ParseRawUser(data RawUser) (profile Profile) {
 	profile.ID = data.Id
 	profile.Username = data.Username
 	profile.FullName = data.FullName
@@ -17,14 +23,14 @@ func ParseProfile(html string) (profile Profile) {
 	profile.Follower = data.EdgeFollowedBy.Count
 	profile.Following = data.EdgeFollow.Count
 	profile.Biography = data.Biography
-	profile.TotalPost = data.EdgeOwnderToTimelineMedia.Count
+	profile.TotalPost = data.EdgeOwnerToTimelineMedia.Count
 	profile.ExternalURL = data.ExternalURL
 	profile.IsVerified = data.IsVerified
 
 	var last_post []InstagramPost
 	var account_comment, account_like, account_video_view, totalVideo, tot int
 
-	for _, edge := range data.EdgeOwnderToTimelineMedia.Edges {
+	for _, edge := range data.EdgeOwnerToTimelineMedia.Edges {
 		var node PostNode
 		var post InstagramPost
 		node = edge.Node
@@ -59,7 +65,7 @@ func ParseProfile(html string) (profile Profile) {
 
 	profile.IGTV = []IGTV{}
 
-	for _, v := range page.Graphql.User.EdgeFelixVideoTimeline.Edges {
+	for _, v := range data.EdgeFelixVideoTimeline.Edges {
 		caption := ""
 		if len(v.Node.EdgeMediaToCaption.Edges) > 0 {
 			caption = v.Node.EdgeMediaToCaption.Edges[0].Node.Text
@@ -78,7 +84,6 @@ func ParseProfile(html string) (profile Profile) {
 			Caption:          caption,
 		})
 	}
-
 	return
 }
 
@@ -102,10 +107,10 @@ type RawUser struct {
 	EdgeFollow struct {
 		Count int `json:"count"`
 	} `json:"edge_follow"`
-	IsPrivate                 bool   `json:"is_private"`
-	IsVerified                bool   `json:"is_verified"`
-	ProfilePicUrl             string `json:"profile_pic_url"`
-	EdgeOwnderToTimelineMedia struct {
+	IsPrivate                bool   `json:"is_private"`
+	IsVerified               bool   `json:"is_verified"`
+	ProfilePicUrl            string `json:"profile_pic_url"`
+	EdgeOwnerToTimelineMedia struct {
 		Count int
 		Edges []struct {
 			Node PostNode `json:"node"`
@@ -116,15 +121,15 @@ type RawUser struct {
 }
 
 /*
-"edge_media_to_caption": {
-                "edges": [
-                  {
-                    "node": {
-                      "text": "Today is World Mental Health Day and we support kids' mental health and organizations like @YourMomCares and RxWell that are doing innovative, groundbreaking work in transforming how young people receive the mental health support they need.\nWe are donating to help continue the further development of behavioral health care that was not previously available for adolescents. Text maroon5 to 44-321 to help support this cause as well."
-                    }
-                  }
-                ]
-              },
+	"edge_media_to_caption": {
+	                "edges": [
+	                  {
+	                    "node": {
+	                      "text": "Today is World Mental Health Day and we support kids' mental health and organizations like @YourMomCares and RxWell that are doing innovative, groundbreaking work in transforming how young people receive the mental health support they need.\nWe are donating to help continue the further development of behavioral health care that was not previously available for adolescents. Text maroon5 to 44-321 to help support this cause as well."
+	                    }
+	                  }
+	                ]
+	              },
 */
 type EdgeFelixVideoTimeline struct {
 	Count int `json:"count"`
