@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/patrickmn/go-cache"
 	"gitlab.com/ariefhidayatulloh/easy-ig/apify"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 	"gitlab.com/ariefhidayatulloh/easy-ig/webprofile"
@@ -191,16 +192,38 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 	return
 }
 
+var c = cache.New(5*time.Minute, 10*time.Minute)
+
+type ResponseUsername struct {
+	profile      instagram.Profile
+	statusCode   int
+	isRestricted bool
+}
+
+func getWebProfile(username string) (profile instagram.Profile, statusCode int, isRestricted bool, err error) {
+	resp := ResponseUsername{}
+	if v, ok := c.Get(username); ok {
+		resp = v.(ResponseUsername)
+		profile = resp.profile
+		statusCode = resp.statusCode
+		log.Println("from cache", username)
+		return
+	}
+
+	profile, statusCode, isRestricted, err = webprofile.GetWebProfile(username)
+	return
+
+}
+
 func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 
-	var data Instagram
-	data.Username = _GET(r, "username")
-	if data.Username == "" {
+	username := _GET(r, "username")
+	if username == "" {
 		JSONView(w, r, nil, http.StatusBadRequest)
 		return
 	}
 
-	rawUser, statusCode, isRestricted, err := webprofile.GetWebProfile(data.Username)
+	profile, statusCode, isRestricted, err := webprofile.GetWebProfile(username)
 	if err != nil {
 		log.Println(err)
 		JSONView(w, r, map[string]string{"error": "system error"}, http.StatusInternalServerError)
@@ -216,7 +239,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
 		return
 	}
-	JSONView(w, r, rawUser, 200)
+	JSONView(w, r, profile, 200)
 	return
 
 }
