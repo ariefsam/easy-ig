@@ -130,3 +130,8 @@ func executeUsername(waiters []responseUsername, usernames []string) {
 		w.wait <- respByUsername[w.name]
 	}
 }
+
+// func executeByWebProfile(waiters []responseUsername, usernames []string) {
+// 	data, _, _, err = GetWebProfile(username)
+// 	return
+// }

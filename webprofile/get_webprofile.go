@@ -34,6 +34,9 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 	}
 
 	statusCode = resp.StatusCode
+	if statusCode == 404 {
+		return
+	}
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
