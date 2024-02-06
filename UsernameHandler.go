@@ -211,6 +211,15 @@ func getWebProfile(username string) (profile instagram.Profile, statusCode int, 
 	}
 
 	profile, statusCode, isRestricted, err = webprofile.GetWebProfile(username)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	resp.profile = profile
+	resp.statusCode = statusCode
+	resp.isRestricted = isRestricted
+	c.Set(username, resp, cache.DefaultExpiration)
 	return
 
 }
@@ -223,7 +232,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile, statusCode, isRestricted, err := webprofile.GetWebProfile(username)
+	profile, statusCode, isRestricted, err := getWebProfile(username)
 	if err != nil {
 		log.Println(err)
 		JSONView(w, r, map[string]string{"error": "system error"}, http.StatusInternalServerError)
