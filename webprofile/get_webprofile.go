@@ -47,6 +47,7 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 	rawUser, err := Parse(respBytes)
 	if err != nil {
 		log.Println(err)
+		log.Println(string(respBytes))
 		return
 	}
 
