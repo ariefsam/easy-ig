@@ -235,6 +235,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 	profile, statusCode, isRestricted, err := getWebProfile(username)
 	if err != nil {
 		log.Println(err)
+		log.Println("system error")
 		JSONView(w, r, map[string]string{"error": "system error"}, http.StatusInternalServerError)
 		return
 	}
@@ -248,6 +249,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
 		return
 	}
+	log.Println("from webprofile", statusCode, username, profile.Follower, profile.Biography)
 	JSONView(w, r, profile, 200)
 	return
 
