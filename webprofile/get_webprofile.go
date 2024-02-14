@@ -13,6 +13,15 @@ import (
 )
 
 func GetWebProfile(username string) (profile instagram.Profile, statusCode int, isRestricted bool, err error) {
+	if strings.Contains(username, "@") {
+		statusCode = 404
+		return
+	}
+
+	if strings.Contains(username, "/") {
+		statusCode = 404
+		return
+	}
 	proxy := os.Getenv("PROXY")
 	myClient := &http.Client{}
 	if proxy != "" {
