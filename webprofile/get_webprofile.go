@@ -36,10 +36,10 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 		log.Println("Using proxy: ", proxyURL)
 	}
 
-	address := "https://www.instagram.com/api/v1/users/web_profile_info?username=" + username
+	address := "https://www.instagram.com/api/v1/users/web_profile_info/?username=" + username
 	resp, err := myClient.Get(address)
 	if err != nil {
-		if strings.Contains(err.Error(), "http response to https client") {
+		if strings.Contains(err.Error(), "server gave HTTP response to HTTPS client") {
 			err = nil
 			statusCode = 404
 		}
