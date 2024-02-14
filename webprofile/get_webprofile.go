@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
@@ -29,6 +30,10 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 	address := "https://www.instagram.com/api/v1/users/web_profile_info?username=" + username
 	resp, err := myClient.Get(address)
 	if err != nil {
+		if strings.Contains(err.Error(), "http response to https client") {
+			err = nil
+			statusCode = 404
+		}
 		log.Println(err)
 		return
 	}
