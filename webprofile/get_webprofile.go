@@ -13,6 +13,7 @@ import (
 )
 
 func GetWebProfile(username string) (profile instagram.Profile, statusCode int, isRestricted bool, err error) {
+	log.Println("Checcking username: ", username)
 	if strings.Contains(username, "@") {
 		statusCode = 404
 		return
@@ -49,6 +50,7 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 
 	statusCode = resp.StatusCode
 	if statusCode == 404 {
+		log.Println("status code 404")
 		return
 	}
 

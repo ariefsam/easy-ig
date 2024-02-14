@@ -71,7 +71,7 @@ func usernameWorker() {
 		case <-ctx.Done():
 			log.Println("tick")
 			mustRun = true
-			ctx, _ = context.WithTimeout(context.Background(), time.Second*5)
+			ctx, _ = context.WithTimeout(context.Background(), time.Second*500)
 		}
 
 		if len(username) == 0 {
