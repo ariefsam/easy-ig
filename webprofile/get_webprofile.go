@@ -43,6 +43,7 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 		if strings.Contains(err.Error(), "server gave HTTP response to HTTPS client") {
 			err = nil
 			statusCode = 404
+			return
 		}
 		log.Println(err)
 		return
