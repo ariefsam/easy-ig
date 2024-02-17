@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/patrickmn/go-cache"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
 
@@ -89,7 +90,7 @@ func UsernameWithBase64ImageHandler(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	profile, statusCode, isRestricted, err := GetWebProfile(data.Username)
+	profileWithBase64Image, statusCode, isRestricted, err := GetUsernameWithBase64(data.Username)
 	if err != nil {
 		log.Println(err)
 		log.Println("system error")
@@ -108,7 +109,55 @@ func UsernameWithBase64ImageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profileWithBase64Image := GetProfileBase64(profile)
-
 	JSONView(w, r, profileWithBase64Image, 200)
+}
+
+type WebProfileBase64Response struct {
+	ProfileWithBase64Image instagram.ProfileWithBase64Image
+	StatusCode             int
+	IsRestricted           bool
+	Err                    error
+}
+
+func GetUsernameWithBase64(username string) (profileWithBase64Image instagram.ProfileWithBase64Image, statusCode int, isRestricted bool, err error) {
+
+	if v, ok := c.Get("usernamebase64:" + username); ok {
+		resp := v.(WebProfileBase64Response)
+		return resp.ProfileWithBase64Image, resp.StatusCode, resp.IsRestricted, resp.Err
+	}
+
+	resp := WebProfileBase64Response{}
+
+	defer func() {
+		resp.ProfileWithBase64Image = profileWithBase64Image
+		resp.StatusCode = statusCode
+		resp.IsRestricted = isRestricted
+		resp.Err = err
+		c.Set("usernamebase64:"+username, resp, cache.DefaultExpiration)
+	}()
+
+	profile, statusCode, isRestricted, err := GetWebProfile(username)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	resp.StatusCode = statusCode
+	resp.IsRestricted = isRestricted
+	resp.Err = err
+
+	if isRestricted {
+		log.Println("restricted profile")
+		return
+	}
+
+	if statusCode == 404 {
+		return
+	}
+
+	profileWithBase64Image = GetProfileBase64(profile)
+	resp.ProfileWithBase64Image = profileWithBase64Image
+
+	return
 }
