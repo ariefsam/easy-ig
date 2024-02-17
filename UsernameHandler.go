@@ -200,7 +200,7 @@ type ResponseUsername struct {
 	isRestricted bool
 }
 
-func getWebProfile(username string) (profile instagram.Profile, statusCode int, isRestricted bool, err error) {
+func GetWebProfile(username string) (profile instagram.Profile, statusCode int, isRestricted bool, err error) {
 	defer func() {
 		if errs := recover(); errs != nil {
 			log.Println("panic occurred:", errs)
@@ -244,7 +244,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	profile, statusCode, isRestricted, err := getWebProfile(username)
+	profile, statusCode, isRestricted, err := GetWebProfile(username)
 	if err != nil {
 		log.Println(err)
 		log.Println("system error")

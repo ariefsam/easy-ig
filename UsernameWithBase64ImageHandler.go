@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 
-	"gitlab.com/ariefhidayatulloh/easy-ig/apify"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
 
@@ -79,13 +78,32 @@ func UsernameWithBase64ImageHandler(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	profile, err := apify.Username(data.Username)
+	// profile, err := apify.Username(data.Username)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	JSONView(w, r, map[string]string{"error": "system error"}, http.StatusInternalServerError)
+	// }
+
+	// if profile.IsExist == "no" {
+	// 	JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
+	// 	return
+	// }
+
+	profile, statusCode, isRestricted, err := GetWebProfile(data.Username)
 	if err != nil {
 		log.Println(err)
+		log.Println("system error")
 		JSONView(w, r, map[string]string{"error": "system error"}, http.StatusInternalServerError)
+		return
 	}
 
-	if profile.IsExist == "no" {
+	if isRestricted {
+		log.Println("restricted profile")
+		JSONView(w, r, map[string]string{"client_error": "Profile restricted for 18+, Our API is public app, so we cannot read restricted profile without login. Your RapidAPI quota still reduced."}, 200)
+		return
+	}
+
+	if statusCode == 404 {
 		JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
 		return
 	}
