@@ -201,13 +201,23 @@ type ResponseUsername struct {
 }
 
 func getWebProfile(username string) (profile instagram.Profile, statusCode int, isRestricted bool, err error) {
+	defer func() {
+		if errs := recover(); errs != nil {
+			log.Println("panic occurred:", errs)
+			err = errors.New("service interrupted")
+			return
+		}
+	}()
 	resp := ResponseUsername{}
 	if v, ok := c.Get(username); ok {
-		resp = v.(ResponseUsername)
-		profile = resp.profile
-		statusCode = resp.statusCode
-		log.Println("from cache", username)
-		return
+		resp, ok = v.(ResponseUsername)
+		if ok {
+			profile = resp.profile
+			statusCode = resp.statusCode
+			log.Println("from cache", username, ". Name", profile.FullName, ". Follower", profile.Follower)
+
+			return
+		}
 	}
 
 	profile, statusCode, isRestricted, err = webprofile.GetWebProfile(username)
@@ -241,6 +251,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isRestricted {
+		log.Println("restricted profile")
 		JSONView(w, r, map[string]string{"client_error": "Profile restricted for 18+, Our API is public app, so we cannot read restricted profile without login. Your RapidAPI quota still reduced."}, 200)
 		return
 	}
