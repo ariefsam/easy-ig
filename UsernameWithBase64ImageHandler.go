@@ -120,6 +120,7 @@ type WebProfileBase64Response struct {
 }
 
 func GetUsernameWithBase64(username string) (profileWithBase64Image instagram.ProfileWithBase64Image, statusCode int, isRestricted bool, err error) {
+	log.Println("GetUsernameWithBase64Handler", username)
 
 	if v, ok := c.Get("usernamebase64:" + username); ok {
 
