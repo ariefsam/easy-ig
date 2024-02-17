@@ -229,7 +229,9 @@ func getWebProfile(username string) (profile instagram.Profile, statusCode int, 
 	resp.profile = profile
 	resp.statusCode = statusCode
 	resp.isRestricted = isRestricted
-	c.Set(username, resp, cache.DefaultExpiration)
+	if statusCode == 404 || statusCode == 200 {
+		c.Set(username, resp, cache.DefaultExpiration)
+	}
 	return
 
 }
