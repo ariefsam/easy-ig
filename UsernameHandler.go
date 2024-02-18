@@ -188,7 +188,8 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 		systemError = errors.New("We were sorry, our request blocked by Instagram. Your RapidAPI quota or overage will not be reduced. Please try again, we will try another IP Address.")
 		return
 	}
-	log.Println(statusCode, username, profile.Follower)
+
+	log.Println(statusCode, username, profile.Follower, ". Profile id:", profile.ID)
 	return
 }
 
