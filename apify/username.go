@@ -48,7 +48,7 @@ type responseUsername struct {
 
 var inputChan = make(chan responseUsername, 100000)
 
-func init() {
+func Init() {
 	go usernameWorker()
 }
 

@@ -12,6 +12,15 @@ import (
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
 
+func isAlphanumeric(input string) bool {
+	for _, char := range input {
+		if !(char >= 'a' && char <= 'z') && !(char >= 'A' && char <= 'Z') && !(char >= '0' && char <= '9') && char != '_' {
+			return false
+		}
+	}
+	return true
+}
+
 func GetWebProfile(username string) (profile instagram.Profile, statusCode int, isRestricted bool, err error) {
 	log.Println("Checcking username: ", username)
 	if strings.Contains(username, "@") {
@@ -23,6 +32,18 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 		statusCode = 404
 		return
 	}
+
+	if strings.Contains(username, " ") {
+		statusCode = 404
+		return
+	}
+
+	// check if username alfa numeric with underscore
+	if !isAlphanumeric(username) {
+		statusCode = 404
+		return
+	}
+
 	proxy := os.Getenv("PROXY")
 	myClient := &http.Client{}
 	if proxy != "" {
