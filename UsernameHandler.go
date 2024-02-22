@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
@@ -263,6 +264,9 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		JSONView(w, r, nil, http.StatusBadRequest)
 		return
 	}
+
+	headers, _ := json.MarshalIndent(r.Header, "", " ")
+	log.Println("headers", string(headers))
 
 	profile, statusCode, isRestricted, err := GetWebProfile(username)
 	if err != nil {
