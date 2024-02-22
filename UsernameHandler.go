@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/patrickmn/go-cache"
@@ -201,7 +202,22 @@ type ResponseUsername struct {
 	isRestricted bool
 }
 
+func isAlphanumeric(input string) bool {
+	for _, char := range input {
+		if !(char >= 'a' && char <= 'z') && !(char >= 'A' && char <= 'Z') && !(char >= '0' && char <= '9') && char != '_' {
+			return false
+		}
+	}
+	return true
+}
+
 func GetWebProfile(username string) (profile instagram.Profile, statusCode int, isRestricted bool, err error) {
+	log.Println("Checcking username: ", username)
+	if len(username) == 0 || strings.ContainsAny(username, "@/ ") || !isAlphanumeric(username) {
+		statusCode = 404
+		return
+	}
+
 	defer func() {
 		if errs := recover(); errs != nil {
 			log.Println("panic occurred:", errs)
