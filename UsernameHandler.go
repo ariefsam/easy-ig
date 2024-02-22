@@ -265,7 +265,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	headers, _ := json.MarshalIndent(r.Header, "", " ")
+	headers, _ := json.MarshalIndent(r.Header["X-Rapidapi-User"], "", " ")
 	log.Println("headers", string(headers))
 
 	profile, statusCode, isRestricted, err := GetWebProfile(username)
