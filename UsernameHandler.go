@@ -205,7 +205,7 @@ type ResponseUsername struct {
 
 func isAlphanumeric(input string) bool {
 	for _, char := range input {
-		if !(char >= 'a' && char <= 'z') && !(char >= 'A' && char <= 'Z') && !(char >= '0' && char <= '9') && char != '_' {
+		if !(char >= 'a' && char <= 'z') && !(char >= 'A' && char <= 'Z') && !(char >= '0' && char <= '9') && char != '_' && char != '.' {
 			return false
 		}
 	}
