@@ -261,7 +261,7 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 
 	username := _GET(r, "username")
 	if username == "" {
-		JSONView(w, r, nil, http.StatusBadRequest)
+		JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
 		return
 	}
 

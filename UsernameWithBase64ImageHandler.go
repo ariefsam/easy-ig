@@ -65,7 +65,7 @@ func UsernameWithBase64ImageHandler(w http.ResponseWriter, r *http.Request) {
 	var data Instagram
 	data.Username = _GET(r, "username")
 	if data.Username == "" {
-		JSONView(w, r, nil, http.StatusBadRequest)
+		JSONView(w, r, map[string]string{"client_error": "Username not exist or deleted. Your RapidAPI quota still reduced.", "is_exist": "no"}, 200)
 		return
 	}
 
