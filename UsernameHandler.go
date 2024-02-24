@@ -232,7 +232,8 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 		if ok {
 			profile = resp.profile
 			statusCode = resp.statusCode
-			log.Println("from cache", username, ". Name", profile.FullName, ". Follower", profile.Follower)
+
+			log.Println("from cache, status", statusCode, ". username:", username, ". Name", profile.FullName, ". Follower", profile.Follower)
 
 			return
 		}
