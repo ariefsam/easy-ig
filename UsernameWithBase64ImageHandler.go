@@ -100,7 +100,7 @@ func UsernameWithBase64ImageHandler(w http.ResponseWriter, r *http.Request) {
 
 	if isRestricted {
 		log.Println("restricted profile")
-		JSONView(w, r, map[string]string{"client_error": "Profile restricted for 18+, Our API is public app, so we cannot read restricted profile without login. Your RapidAPI quota still reduced."}, 200)
+		JSONView(w, r, map[string]string{"client_error": "Profile restricted for 18+, Our API is public app, so we cannot read restricted profile without login. Your RapidAPI quota still reduced.", "is_exist": "yes"}, 200)
 		return
 	}
 

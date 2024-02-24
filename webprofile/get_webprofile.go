@@ -62,5 +62,9 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 
 	profile = IgProfile
 
+	if profile.Username == "" {
+		isRestricted = true
+	}
+
 	return
 }
