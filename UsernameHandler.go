@@ -195,7 +195,7 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 	return
 }
 
-var c = cache.New(5*time.Minute, 10*time.Minute)
+var c = cache.New(2*time.Minute, 2*time.Minute)
 
 type ResponseUsername struct {
 	profile      instagram.Profile
