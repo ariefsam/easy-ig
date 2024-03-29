@@ -2,6 +2,8 @@ github.com/ahmdrz/goinsta/v2 v2.4.5 h1:yiNEpTNEx/VWlcCq93miWUx6d2uxdEyklwljsZaiD
 github.com/ahmdrz/goinsta/v2 v2.4.5/go.mod h1:XUEELCWd3hVSqADejqxTa8Uc7Yto9cb6a6HrfkGwVf8=
 github.com/alitto/pond v1.8.3 h1:ydIqygCLVPqIX/USe5EaV/aSRXTRXDEI9JwuDdu+/xs=
 github.com/alitto/pond v1.8.3/go.mod h1:CmvIIGd5jKLasGI3D87qDkQxjzChdKMmnXMg3fG6M6Q=
+github.com/allegro/bigcache/v3 v3.1.0 h1:H2Vp8VOvxcrB91o86fUSVJFqeuz8kpyyB02eH3bSzwk=
+github.com/allegro/bigcache/v3 v3.1.0/go.mod h1:aPyh7jEvrog9zAwx5N7+JUQX5dZTSGpxF1LAR4dr35I=
 github.com/chromedp/cdproto v0.0.0-20220720105051-fd2b6dcad39e h1:AX1yO5n3vfVFvwPtuJAp6ut5qq+MU2Rir5yO9+yk1Mg=
 github.com/chromedp/cdproto v0.0.0-20220720105051-fd2b6dcad39e/go.mod h1:5Y4sD/eXpwrChIuxhSr/G20n9CdbCmoerOHnuAf0Zr0=
 github.com/chromedp/chromedp v0.8.2 h1:EYSsSqWuKYwyHZEJpU00kOGOMz5DE0qDVckelzauMFA=

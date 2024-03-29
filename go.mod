@@ -11,6 +11,7 @@ require (
 require (
 	github.com/ahmdrz/goinsta/v2 v2.4.5 // indirect
 	github.com/alitto/pond v1.8.3 // indirect
+	github.com/allegro/bigcache/v3 v3.1.0 // indirect
 	github.com/chromedp/cdproto v0.0.0-20220720105051-fd2b6dcad39e // indirect
 	github.com/chromedp/chromedp v0.8.2 // indirect
 	github.com/chromedp/sysutil v1.0.0 // indirect

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -11,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrickmn/go-cache"
+	"github.com/allegro/bigcache/v3"
 	"gitlab.com/ariefhidayatulloh/easy-ig/apify"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 	"gitlab.com/ariefhidayatulloh/easy-ig/webprofile"
@@ -195,12 +196,51 @@ func getIgProfile(r *http.Request, username string) (profile instagram.Profile, 
 	return
 }
 
-var c = cache.New(2*time.Minute, 2*time.Minute)
+var cfg = bigcache.Config{
+	// number of shards (must be a power of 2)
+	Shards: 1024,
+
+	// time after which entry can be evicted
+	LifeWindow: 10 * time.Minute,
+
+	// Interval between removing expired entries (clean up).
+	// If set to <= 0 then no action is performed.
+	// Setting to < 1 second is counterproductive — bigcache has a one second resolution.
+	CleanWindow: 5 * time.Minute,
+
+	// rps * lifeWindow, used only in initial memory allocation
+	MaxEntriesInWindow: 1000 * 10 * 60,
+
+	// max entry size in bytes, used only in initial memory allocation
+	MaxEntrySize: 500,
+
+	// prints information about additional memory allocation
+	Verbose: true,
+
+	// cache will not allocate more memory than this limit, value in MB
+	// if value is reached then the oldest entries can be overridden for the new ones
+	// 0 value means no size limit
+	HardMaxCacheSize: 1200,
+
+	// callback fired when the oldest entry is removed because of its expiration time or no space left
+	// for the new entry, or because delete was called. A bitmask representing the reason will be returned.
+	// Default value is nil which means no callback and it prevents from unwrapping the oldest entry.
+	OnRemove: nil,
+
+	// OnRemoveWithReason is a callback fired when the oldest entry is removed because of its expiration time or no space left
+	// for the new entry, or because delete was called. A constant representing the reason will be passed through.
+	// Default value is nil which means no callback and it prevents from unwrapping the oldest entry.
+	// Ignored if OnRemove is specified.
+	OnRemoveWithReason: nil,
+}
+
+// cache, initErr := bigcache.New(context.Background(), config)
+var c, _ = bigcache.New(context.Background(), cfg)
 
 type ResponseUsername struct {
-	profile      instagram.Profile
-	statusCode   int
-	isRestricted bool
+	Profile      instagram.Profile `json:"profile"`
+	StatusCode   int               `json:"status_code"`
+	IsRestricted bool              `json:"is_restricted"`
 }
 
 func isAlphanumeric(input string) bool {
@@ -227,16 +267,20 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 		}
 	}()
 	resp := ResponseUsername{}
-	if v, ok := c.Get(username); ok {
-		resp, ok = v.(ResponseUsername)
-		if ok {
-			profile = resp.profile
-			statusCode = resp.statusCode
+	if v, ok := c.Get(username); ok == nil {
+		log.Println(string(v))
+		err = json.Unmarshal(v, &resp)
+		if err == nil {
+
+			profile = resp.Profile
+			statusCode = resp.StatusCode
 
 			log.Println("from cache, status", statusCode, ". username:", username, ". Name", profile.FullName, ". Follower", profile.Follower)
-
 			return
 		}
+
+		log.Println(err)
+
 	}
 
 	profile, statusCode, isRestricted, err = webprofile.GetWebProfile(username)
@@ -245,14 +289,26 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 		return
 	}
 
-	resp.profile = profile
-	resp.statusCode = statusCode
-	resp.isRestricted = isRestricted
+	resp.Profile = profile
+	resp.StatusCode = statusCode
+	resp.IsRestricted = isRestricted
+	respByte, err := json.Marshal(resp)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	if statusCode == 200 {
-		c.Set(username, resp, 10*time.Minute)
+		log.Println("set cache", string(respByte))
+		err = c.Set(username, respByte)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 	if statusCode == 404 {
-		c.Set(username, resp, 100*time.Minute)
+		err = c.Set(username, respByte)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 	return
 

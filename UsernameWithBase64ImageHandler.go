@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/patrickmn/go-cache"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
 
@@ -122,11 +121,16 @@ type WebProfileBase64Response struct {
 func GetUsernameWithBase64(username string) (profileWithBase64Image instagram.ProfileWithBase64Image, statusCode int, isRestricted bool, err error) {
 	log.Println("GetUsernameWithBase64Handler", username)
 
-	if v, ok := c.Get("usernamebase64:" + username); ok {
+	if v, ok := c.Get("usernamebase64:" + username); ok == nil {
 
-		resp, _ := v.(WebProfileBase64Response)
-		log.Println("GetUsernameWithBase64 from cache:", username, ". Follower:", resp.ProfileWithBase64Image.Follower)
-		return resp.ProfileWithBase64Image, resp.StatusCode, resp.IsRestricted, resp.Err
+		resp := WebProfileBase64Response{}
+		// resp, _ := v.(WebProfileBase64Response)
+		err = json.Unmarshal(v, &resp)
+		if err == nil {
+			log.Println("GetUsernameWithBase64 from cache:", username, ". Follower:", resp.ProfileWithBase64Image.Follower)
+			return resp.ProfileWithBase64Image, resp.StatusCode, resp.IsRestricted, resp.Err
+		}
+		log.Println(err)
 	}
 
 	resp := WebProfileBase64Response{}
@@ -136,7 +140,13 @@ func GetUsernameWithBase64(username string) (profileWithBase64Image instagram.Pr
 		resp.StatusCode = statusCode
 		resp.IsRestricted = isRestricted
 		resp.Err = err
-		c.Set("usernamebase64:"+username, resp, cache.DefaultExpiration)
+		respByte, err := json.Marshal(resp)
+		if err == nil {
+			c.Set("usernamebase64:"+username, respByte)
+		}
+
+		log.Println(err)
+
 	}()
 
 	profile, statusCode, isRestricted, err := GetWebProfile(username)
