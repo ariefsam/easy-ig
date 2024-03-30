@@ -298,7 +298,7 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 		return
 	}
 	if statusCode == 200 {
-		log.Println("set cache", string(respByte))
+
 		err = c.Set(username, respByte)
 		if err != nil {
 			log.Println(err)
