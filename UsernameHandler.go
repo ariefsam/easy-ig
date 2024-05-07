@@ -292,24 +292,26 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 	resp.Profile = profile
 	resp.StatusCode = statusCode
 	resp.IsRestricted = isRestricted
-	respByte, err := json.Marshal(resp)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	if statusCode == 200 {
+	// respByte, err := json.Marshal(resp)
+	// if err != nil {
+	// 	log.Println(err)
+	// 	return
+	// }
 
-		err = c.Set(username, respByte)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-	if statusCode == 404 {
-		err = c.Set(username, respByte)
-		if err != nil {
-			log.Println(err)
-		}
-	}
+	// sementara hapus cache
+	// if statusCode == 200 {
+
+	// 	err = c.Set(username, respByte)
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 	}
+	// }
+	// if statusCode == 404 {
+	// 	err = c.Set(username, respByte)
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 	}
+	// }
 	return
 
 }
