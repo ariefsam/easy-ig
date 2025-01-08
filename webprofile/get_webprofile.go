@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
@@ -27,7 +28,11 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 		log.Println("Using proxy: ", proxyURL)
 	}
 
+	myClient.Timeout = 60 * time.Second
+
 	address := "https://www.instagram.com/api/v1/users/web_profile_info/?username=" + username
+	log.Println("Getting web profile info for", username)
+	log.Println(address)
 	resp, err := myClient.Get(address)
 	if err != nil {
 		if strings.Contains(err.Error(), "server gave HTTP response to HTTPS client") {
@@ -48,6 +53,14 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Println(err)
+		return
+	}
+
+	log.Println(address, "status code", statusCode, ". response", string(respBytes))
+
+	if statusCode == 502 {
+		log.Println("502 Bad Gateway, return 404")
+		statusCode = 404
 		return
 	}
 
