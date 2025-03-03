@@ -166,10 +166,16 @@ type EdgeFelixVideoTimeline struct {
 	} `json:"edges"`
 }
 
-type PostPage struct {
+type PostPageOldMar2025 struct {
 	GraphQL struct {
 		ShortCodeMedia PostNode `json:"shortcode_media"`
 	} `json:"graphql"`
+}
+
+type PostPage struct {
+	GraphQL struct {
+		ShortCodeMedia PostNode `json:"xdt_shortcode_media"`
+	} `json:"data"`
 }
 
 // func (node *PostNode) ToAccountPost() InstagramPost {

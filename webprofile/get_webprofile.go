@@ -2,6 +2,7 @@ package webprofile
 
 import (
 	"crypto/tls"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -47,6 +48,12 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 	statusCode = resp.StatusCode
 	if statusCode == 404 {
 		log.Println(username, "status code 404")
+		return
+	}
+
+	if statusCode == 400 {
+		log.Println(username, "status code 400")
+		err = errors.New("bad server response")
 		return
 	}
 

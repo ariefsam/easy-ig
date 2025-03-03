@@ -11,50 +11,23 @@ import (
 )
 
 func GetPostByShortcodeHandler(w http.ResponseWriter, r *http.Request) {
-
-	var data instagram.InstagramPost
 	shortcode := _GET(r, "shortcode")
 
 	if len(shortcode) < 5 {
 		return
 	}
-
-	urlPost := "https://www.instagram.com/p/" + shortcode + "?__a=1&__d=dis"
-
-	myClient := &http.Client{}
-	if config.Proxy != "" {
-		proxyURL, _ := url.Parse(config.Proxy)
-		myClient = &http.Client{
-			Transport: &http.Transport{
-				Proxy:           http.ProxyURL(proxyURL),
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
-		}
-
-		log.Println("Using proxy: ", proxyURL)
-	}
-
-	resp, err := myClient.Get(urlPost)
+	data, err := getDataPost(shortcode)
 	if err != nil {
 		log.Println(err)
+		return
 	}
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	data = instagram.ParsePost(string(body))
 
 	JSONView(w, r, data, http.StatusOK)
 }
 
-func GetPostByShortcodeBase64Handler(w http.ResponseWriter, r *http.Request) {
-
-	var data instagram.InstagramPost
-	shortcode := _GET(r, "shortcode")
-
-	if len(shortcode) < 5 {
-		return
-	}
-
-	urlPost := "https://www.instagram.com/p/" + shortcode + "?__a=1&__d=dis"
+func getDataPost(shortcode string) (data instagram.InstagramPost, err error) {
+	// urlPost := "https://www.instagram.com/p/" + shortcode + "?__a=1&__d=dis"
+	urlPost := "https://www.instagram.com/graphql/query"
 
 	myClient := &http.Client{}
 	if config.Proxy != "" {
@@ -69,13 +42,36 @@ func GetPostByShortcodeBase64Handler(w http.ResponseWriter, r *http.Request) {
 		log.Println("Using proxy: ", proxyURL)
 	}
 
-	resp, err := myClient.Get(urlPost)
+	// resp, err := myClient.Get(urlPost)
+	resp, err := myClient.PostForm(urlPost, url.Values{
+		"variables": []string{"{\"shortcode\":\"" + shortcode + "\"}"},
+		"doc_id":    []string{"8845758582119845"},
+	})
 	if err != nil {
 		log.Println(err)
 	}
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+	}
+
+	log.Println(string(body))
 	data = instagram.ParsePost(string(body))
+	return
+}
+
+func GetPostByShortcodeBase64Handler(w http.ResponseWriter, r *http.Request) {
+	shortcode := _GET(r, "shortcode")
+
+	if len(shortcode) < 5 {
+		return
+	}
+	data, err := getDataPost(shortcode)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	dataPost := instagram.InstagramPostWithBase64Image{}
 	dataPost.InstagramPost = data
 	dataPost.DisplayURLBase64Image, _ = getBase64Image(data.DisplayURL)
