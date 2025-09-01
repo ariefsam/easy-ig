@@ -1,0 +1,14 @@
+[Unit]
+Description=Easy IG Service
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/easy-ig
+ExecStart=/home/ubuntu/easy-ig/start-easy-ig.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

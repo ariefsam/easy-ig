@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
@@ -34,9 +35,11 @@ func getDataPost(shortcode string) (data instagram.InstagramPost, err error) {
 		proxyURL, _ := url.Parse(config.Proxy)
 		myClient = &http.Client{
 			Transport: &http.Transport{
-				Proxy:           http.ProxyURL(proxyURL),
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				Proxy:                 http.ProxyURL(proxyURL),
+				TLSClientConfig:       &tls.Config{InsecureSkipVerify: true},
+				ResponseHeaderTimeout: time.Second * 100,
 			},
+			Timeout: time.Second * 100,
 		}
 
 		log.Println("Using proxy: ", proxyURL)
