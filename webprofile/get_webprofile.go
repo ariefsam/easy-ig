@@ -34,7 +34,24 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 	address := "https://www.instagram.com/api/v1/users/web_profile_info/?username=" + username
 	log.Println("Getting web profile info for", username)
 	log.Println(address)
-	resp, err := myClient.Get(address)
+
+	req, err := http.NewRequest("GET", address, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	req.Header.Set("x-ig-app-id", "936619743392459")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Referer", "https://www.instagram.com/")
+	req.Header.Set("Origin", "https://www.instagram.com")
+	req.Header.Set("Sec-Fetch-Site", "same-origin")
+	req.Header.Set("Sec-Fetch-Mode", "cors")
+	req.Header.Set("Sec-Fetch-Dest", "empty")
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
+
+	resp, err := myClient.Do(req)
 	if err != nil {
 		if strings.Contains(err.Error(), "server gave HTTP response to HTTPS client") {
 			err = nil
