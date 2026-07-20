@@ -31,7 +31,9 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 
 	myClient.Timeout = 60 * time.Second
 
-	address := "https://www.instagram.com/api/v1/users/web_profile_info/?username=" + username
+	// i.instagram.com (mobile subdomain) avoids the aggressive rate-throttling
+	// that www.instagram.com now applies to this REST endpoint.
+	address := "https://i.instagram.com/api/v1/users/web_profile_info/?username=" + username
 	log.Println("Getting web profile info for", username)
 	log.Println(address)
 
