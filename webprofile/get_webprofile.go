@@ -9,18 +9,36 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 )
 
+// lastGoodProxy is the index (into the proxy list built in GetWebProfile) of
+// whichever proxy most recently succeeded, so the next call tries it first
+// instead of always starting from PROXY and re-discovering it's throttled.
+var lastGoodProxy int32
+
 func GetWebProfile(username string) (profile instagram.Profile, statusCode int, isRestricted bool, err error) {
-	profile, statusCode, isRestricted, err = getWebProfileViaProxy(username, os.Getenv("PROXY"))
-	if err != nil {
-		if fallbackProxy := os.Getenv("PROXY_FALLBACK"); fallbackProxy != "" {
-			log.Println("primary proxy failed (", err, "), retrying with fallback proxy")
-			profile, statusCode, isRestricted, err = getWebProfileViaProxy(username, fallbackProxy)
+	proxies := []string{os.Getenv("PROXY")}
+	if fallbackProxy := os.Getenv("PROXY_FALLBACK"); fallbackProxy != "" {
+		proxies = append(proxies, fallbackProxy)
+	}
+
+	start := int(atomic.LoadInt32(&lastGoodProxy))
+	if start >= len(proxies) {
+		start = 0
+	}
+
+	for i := range proxies {
+		idx := (start + i) % len(proxies)
+		profile, statusCode, isRestricted, err = getWebProfileViaProxy(username, proxies[idx])
+		if err == nil {
+			atomic.StoreInt32(&lastGoodProxy, int32(idx))
+			return
 		}
+		log.Println("proxy index", idx, "failed (", err, "), trying next")
 	}
 	return
 }
