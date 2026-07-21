@@ -15,7 +15,17 @@ import (
 )
 
 func GetWebProfile(username string) (profile instagram.Profile, statusCode int, isRestricted bool, err error) {
-	proxy := os.Getenv("PROXY")
+	profile, statusCode, isRestricted, err = getWebProfileViaProxy(username, os.Getenv("PROXY"))
+	if err != nil {
+		if fallbackProxy := os.Getenv("PROXY_FALLBACK"); fallbackProxy != "" {
+			log.Println("primary proxy failed (", err, "), retrying with fallback proxy")
+			profile, statusCode, isRestricted, err = getWebProfileViaProxy(username, fallbackProxy)
+		}
+	}
+	return
+}
+
+func getWebProfileViaProxy(username string, proxy string) (profile instagram.Profile, statusCode int, isRestricted bool, err error) {
 	myClient := &http.Client{}
 	if proxy != "" {
 		proxyURL, _ := url.Parse(proxy)
