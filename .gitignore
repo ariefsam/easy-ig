@@ -4,3 +4,8 @@ easy-ig
 google.json
 /tmp
 /sessions
+# request-log SQLite database (see .env.example REQLOG_DB)
+/logs/
+*.db
+*.db-wal
+*.db-shm

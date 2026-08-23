@@ -1,0 +1,33 @@
+{{define "login.html"}}<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Sign in — easy-ig logs</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+       background:#f6f7f9;color:#111827;display:flex;align-items:center;
+       justify-content:center;min-height:100vh;padding:1rem}
+  .box{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:1.6rem;width:100%;max-width:340px}
+  h1{font-size:1.05rem;margin-bottom:.25rem}
+  p.sub{color:#6b7280;font-size:.85rem;margin-bottom:1.1rem}
+  label{display:block;font-size:.78rem;font-weight:600;color:#6b7280;margin:.7rem 0 .25rem}
+  input{width:100%;font:inherit;padding:.5rem .6rem;border:1px solid #e5e7eb;border-radius:7px}
+  button{width:100%;margin-top:1.1rem;font:inherit;font-weight:700;padding:.55rem;
+         background:#4f46e5;color:#fff;border:none;border-radius:7px;cursor:pointer}
+  .err{background:#fee2e2;color:#7f1d1d;padding:.55rem .7rem;border-radius:7px;
+       font-size:.85rem;margin-bottom:.9rem}
+</style></head>
+<body>
+  <form class="box" method="POST" action="{{.Prefix}}/login{{if .Next}}?next={{.Next}}{{end}}">
+    <h1>easy-ig logs</h1>
+    <p class="sub">Sign in to view request logs.</p>
+    {{if .Error}}<div class="err">{{.Error}}</div>{{end}}
+    <label for="u">Username</label>
+    <input id="u" name="username" autocomplete="username" autofocus required>
+    <label for="p">Password</label>
+    <input id="p" name="password" type="password" autocomplete="current-password" required>
+    <button type="submit">Sign in</button>
+  </form>
+</body></html>
+{{end}}

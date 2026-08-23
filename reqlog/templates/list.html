@@ -1,0 +1,82 @@
+{{define "list.html"}}
+{{template "head" (dict "Title" "Requests" "Prefix" .Prefix)}}
+<h1>Requests</h1>
+
+{{if gt .Dropped 0}}
+<div class="note warn">
+  <strong>{{.Dropped}}</strong> entr{{if eq .Dropped 1}}y{{else}}ies{{end}} dropped because the
+  write queue was full. Logging is deliberately lossy so it can never slow the API down —
+  but a large number here means the queue needs raising.
+</div>
+{{end}}
+
+<div class="card">
+  <form class="filters" method="GET" action="{{.Prefix}}/">
+    <input type="search" name="q" placeholder="Search path, query or error"
+           value="{{qv .Query "q"}}" style="min-width:230px">
+    <select name="status">
+      <option value="">Any status</option>
+      <option value="errors" {{if eq (qv .Query "status") "errors"}}selected{{end}}>Errors (4xx + 5xx)</option>
+      <option value="2xx" {{if eq (qv .Query "status") "2xx"}}selected{{end}}>2xx</option>
+      <option value="4xx" {{if eq (qv .Query "status") "4xx"}}selected{{end}}>4xx</option>
+      <option value="5xx" {{if eq (qv .Query "status") "5xx"}}selected{{end}}>5xx</option>
+    </select>
+    <select name="path">
+      <option value="">Any path</option>
+      {{$sel := qv .Query "path"}}
+      {{range .Paths}}<option value="{{.}}" {{if eq . $sel}}selected{{end}}>{{.}}</option>{{end}}
+    </select>
+    <select name="days">
+      <option value="">All time</option>
+      {{$d := qv .Query "days"}}
+      <option value="1" {{if eq $d "1"}}selected{{end}}>Last 24h</option>
+      <option value="7" {{if eq $d "7"}}selected{{end}}>Last 7 days</option>
+      <option value="30" {{if eq $d "30"}}selected{{end}}>Last 30 days</option>
+    </select>
+    <button type="submit">Filter</button>
+    <a href="{{.Prefix}}/" class="muted" style="margin-left:.25rem">Reset</a>
+  </form>
+</div>
+
+<div class="card">
+  <p class="muted" style="margin-bottom:.6rem">
+    {{.Total}} matching entr{{if eq .Total 1}}y{{else}}ies{{end}} ·
+    retention window {{if eq .Retention 0}}disabled{{else}}{{.Retention}} day(s){{end}}
+  </p>
+  <div style="overflow-x:auto">
+  <table>
+    <thead><tr>
+      <th>Time</th><th>Method</th><th>Path</th><th>Query</th>
+      <th class="num">Status</th><th class="num">Duration</th><th class="num">Size</th>
+      <th>IP</th><th></th>
+    </tr></thead>
+    <tbody>
+      {{range .Entries}}
+      <tr>
+        <td class="muted">{{fmtTime .At}}</td>
+        <td>{{.Method}}</td>
+        <td>{{.Path}}</td>
+        <td class="muted" style="max-width:230px;overflow:hidden;text-overflow:ellipsis">{{.Query}}</td>
+        <td class="num"><span class="pill {{statusClass .Status}}">{{.Status}}</span></td>
+        <td class="num">{{fmtMS .Duration}}</td>
+        <td class="num">{{fmtBytes .RespBytes}}</td>
+        <td class="muted">{{.IP}}</td>
+        <td><a href="{{$.Prefix}}/entry?id={{.ID}}">detail{{if .BodyStored}} + body{{end}}</a></td>
+      </tr>
+      {{else}}
+      <tr><td colspan="9" class="muted" style="padding:1.2rem">No entries match this filter.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+  </div>
+
+  {{if gt .TotalPages 1}}
+  <div class="pager">
+    {{if .HasPrev}}<a href="?page={{add .Page -1}}" class="ghost">← Previous</a>{{end}}
+    <span class="muted">Page {{.Page}} of {{.TotalPages}}</span>
+    {{if .HasNext}}<a href="?page={{add .Page 1}}">Next →</a>{{end}}
+  </div>
+  {{end}}
+</div>
+{{template "foot"}}
+{{end}}

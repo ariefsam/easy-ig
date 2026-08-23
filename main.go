@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/mux"
+
+	"gitlab.com/ariefhidayatulloh/easy-ig/reqlog"
 )
 
 var router *mux.Router
@@ -18,18 +23,30 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.SetOutput(os.Stdout)
 	config = LoadConfig()
-	log.Printf("%+v", config)
+	// Config.String masks the proxy password and the RapidAPI secret. Printing
+	// the struct directly wrote both into the log on every start.
+	log.Printf("%s", config)
+
 	router = mux.NewRouter()
 
-	router.Path("/username").HandlerFunc(UsernameHandler)
-	router.Path("/username-with-base64-image").HandlerFunc(UsernameWithBase64ImageHandler)
-	router.Path("/get-post").HandlerFunc(GetPostByShortcodeHandler)
-	router.Path("/get-post-with-base64-image").HandlerFunc(GetPostByShortcodeHandler)
+	// The API lives on its own subrouter so the RapidAPI secret guard applies
+	// only to it. Registered on the parent, that middleware would also demand
+	// the header on the dashboard, which no browser sends.
+	api := router.NewRoute().Subrouter()
+	api.Path("/username").HandlerFunc(UsernameHandler)
+	api.Path("/username-with-base64-image").HandlerFunc(UsernameWithBase64ImageHandler)
+	api.Path("/get-post").HandlerFunc(GetPostByShortcodeHandler)
+	api.Path("/get-post-with-base64-image").HandlerFunc(GetPostByShortcodeHandler)
+
+	store, shutdownReqLog := setupRequestLog(api)
+	defer shutdownReqLog()
+
+	// Added after the request logger so the logger sits outside it, and a
+	// rejected request (401, missing secret) is still recorded.
 	if config.RapidApi.ProxySecret != "" {
-		router.Use(rapidApiMiddleware)
+		api.Use(rapidApiMiddleware)
 	}
 
-	//loggedRouter := handlers.LoggingHandler(os.Stdout, r)
 	srv := &http.Server{
 		Handler: router,
 		Addr:    ":" + config.Port,
@@ -38,8 +55,99 @@ func main() {
 		ReadTimeout:  50 * time.Second,
 	}
 
-	log.Fatal(srv.ListenAndServe())
+	// Shut down on signal rather than dying mid-write, so the log queue
+	// drains and SQLite closes cleanly instead of leaving a stale WAL.
+	idle := make(chan struct{})
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+		<-sig
+		log.Println("shutting down")
 
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Printf("graceful shutdown: %v", err)
+		}
+		if store != nil {
+			if w, d := store.WriterStats(); d > 0 {
+				log.Printf("reqlog: %d written, %d dropped this run", w, d)
+			}
+		}
+		close(idle)
+	}()
+
+	log.Printf("listening on :%s", config.Port)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
+	<-idle
+}
+
+// setupRequestLog wires request logging and its dashboard when enabled, and
+// returns a cleanup func that drains the queue.
+//
+// Failures here are logged and skipped rather than fatal — with one
+// exception. A misconfigured dashboard is fatal, because the alternative is
+// a service that looks healthy while request logs sit behind broken or
+// absent authentication.
+func setupRequestLog(api *mux.Router) (*reqlog.Store, func()) {
+	noop := func() {}
+	if !config.ReqLog.Enabled {
+		log.Println("reqlog: disabled (set REQLOG_ENABLED=true to turn on)")
+		return nil, noop
+	}
+
+	store, err := reqlog.Open(reqlog.Config{
+		Path:          config.ReqLog.DBPath,
+		RetentionDays: config.ReqLog.RetentionDays,
+		Capture:       reqlog.ParseCaptureMode(config.ReqLog.Capture),
+		MaxBodyBytes:  config.ReqLog.MaxBodyBytes,
+		QueueSize:     config.ReqLog.QueueSize,
+	})
+	if err != nil {
+		log.Printf("reqlog: disabled — %v", err)
+		return nil, noop
+	}
+
+	api.Use(store.MiddlewareFunc())
+
+	auth, err := reqlog.NewAuth(reqlog.AuthConfig{
+		User:          config.ReqLog.DashboardUser,
+		PasswordHash:  config.ReqLog.DashboardPassHash,
+		SessionSecret: config.ReqLog.SessionSecret,
+	})
+	if err != nil {
+		_ = store.Close()
+		log.Fatalf("reqlog dashboard: %v", err)
+	}
+
+	dash, err := reqlog.NewDashboard(store, auth, config.ReqLog.DashboardPrefix)
+	if err != nil {
+		_ = store.Close()
+		log.Fatalf("reqlog dashboard: %v", err)
+	}
+
+	// Started only now that the dashboard is known good. RunRetention prunes
+	// immediately, so starting it earlier raced Close() on the fatal path
+	// above and logged "database is closed".
+	ctx, cancelRetention := context.WithCancel(context.Background())
+	go store.RunRetention(ctx, 24*time.Hour)
+	// Mounted on the parent router: the dashboard must stay clear of both the
+	// RapidAPI guard and the request logger, so browsing logs does not
+	// generate log entries about browsing logs.
+	router.PathPrefix(dash.Prefix()).Handler(dash.Handler())
+
+	log.Printf("reqlog: recording to %s (retention %d day(s), capture %q), dashboard at %s",
+		config.ReqLog.DBPath, store.RetentionDays(),
+		config.ReqLog.Capture, dash.Prefix())
+
+	return store, func() {
+		cancelRetention()
+		if err := store.Close(); err != nil {
+			log.Printf("reqlog: close: %v", err)
+		}
+	}
 }
 
 func rapidApiMiddleware(next http.Handler) http.Handler {

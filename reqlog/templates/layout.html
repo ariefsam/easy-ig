@@ -1,0 +1,77 @@
+{{define "head"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{{.Title}} — easy-ig logs</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#f6f7f9; --card:#fff; --ink:#111827; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#4f46e5; --ok:#15803d; --warn:#b45309; --err:#b91c1c;
+  }
+  body{font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+       background:var(--bg);color:var(--ink)}
+  a{color:var(--accent)}
+  .wrap{max-width:1180px;margin:0 auto;padding:1.25rem}
+  header{background:var(--card);border-bottom:1px solid var(--line)}
+  header .wrap{display:flex;align-items:center;gap:1.25rem;padding:.85rem 1.25rem}
+  .brand{font-weight:800;letter-spacing:-.01em}
+  nav{display:flex;gap:1rem;flex:1}
+  nav a{text-decoration:none;color:var(--muted);font-weight:600;padding:.2rem 0}
+  nav a:hover,nav a.on{color:var(--accent)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1rem 1.15rem;margin-bottom:1rem}
+  h1{font-size:1.15rem;margin-bottom:.85rem}
+  h2{font-size:.95rem;margin-bottom:.7rem}
+  table{width:100%;border-collapse:collapse;font-size:.86rem}
+  th,td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:#fafbfc}
+  tbody tr:hover{background:#fafbfc}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;padding:.05rem .45rem;border-radius:999px;font-size:.76rem;font-weight:700}
+  .s2{background:#dcfce7;color:var(--ok)} .s3{background:#e0e7ff;color:#3730a3}
+  .s4{background:#fef3c7;color:var(--warn)} .s5{background:#fee2e2;color:var(--err)}
+  .muted{color:var(--muted)}
+  .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.85rem}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.8rem .9rem}
+  .stat .k{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .stat .v{font-size:1.3rem;font-weight:800;font-variant-numeric:tabular-nums}
+  form.filters{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+  input,select,button{font:inherit;padding:.4rem .55rem;border:1px solid var(--line);
+                      border-radius:7px;background:#fff;color:inherit}
+  button{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700;cursor:pointer}
+  button.ghost{background:#fff;color:var(--ink);border-color:var(--line);font-weight:600}
+  .bar{height:9px;border-radius:999px;background:var(--accent);min-width:2px}
+  .bar-wrap{background:#eef0f4;border-radius:999px;overflow:hidden;width:100%}
+  pre{background:#0f172a;color:#e2e8f0;padding:.85rem;border-radius:8px;overflow:auto;
+      font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;max-height:60vh;white-space:pre-wrap;word-break:break-word}
+  .note{padding:.6rem .8rem;border-radius:8px;margin-bottom:.85rem;font-size:.87rem}
+  .note.ok{background:#dcfce7;color:#14532d}
+  .note.bad{background:#fee2e2;color:#7f1d1d}
+  .note.warn{background:#fef3c7;color:#78350f}
+  .pager{display:flex;gap:.5rem;align-items:center;margin-top:.85rem}
+  .kv{display:grid;grid-template-columns:150px 1fr;gap:.35rem .9rem;font-size:.87rem}
+  .kv dt{color:var(--muted)}
+  .kv dd{word-break:break-all}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <span class="brand">easy-ig logs</span>
+  <nav>
+    <a href="{{.Prefix}}/">Requests</a>
+    <a href="{{.Prefix}}/stats">Statistics</a>
+    <a href="{{.Prefix}}/settings">Settings</a>
+  </nav>
+  <a href="{{.Prefix}}/logout" class="muted">Log out</a>
+</div></header>
+<div class="wrap">
+{{end}}
+
+{{define "foot"}}
+</div>
+</body>
+</html>
+{{end}}

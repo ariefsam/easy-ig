@@ -1,0 +1,54 @@
+{{define "settings.html"}}
+{{template "head" (dict "Title" "Settings" "Prefix" .Prefix)}}
+<h1>Settings</h1>
+
+{{if .Error}}<div class="note bad">{{.Error}}</div>{{end}}
+{{if .Notice}}<div class="note ok">{{.Notice}}</div>{{end}}
+
+<div class="card">
+  <h2>Retention (sliding window)</h2>
+  <p class="muted" style="margin-bottom:.85rem">
+    Entries older than this are deleted — on save, then once a day. Saving also
+    reclaims disk space, which a plain delete would not. Set to <strong>0</strong>
+    to keep everything indefinitely.
+  </p>
+  <form method="POST" action="{{.Prefix}}/settings" class="filters">
+    <label for="rd" class="muted">Keep entries for</label>
+    <input id="rd" name="retention_days" type="number" min="0" max="3650"
+           value="{{.Retention}}" style="width:110px">
+    <span class="muted">day(s)</span>
+    <button type="submit">Save</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Current storage</h2>
+  <dl class="kv">
+    <dt>Database file</dt><dd>{{.DBPath}}</dd>
+    <dt>Size on disk</dt><dd>{{fmtBytes .Summary.DBBytes}}</dd>
+    <dt>Entries stored</dt><dd>{{.Summary.Total}}</dd>
+    <dt>Oldest entry</dt>
+    <dd>{{if .Summary.Total}}{{fmtTime .Summary.OldestEntry}}{{else}}<span class="muted">—</span>{{end}}</dd>
+    <dt>Newest entry</dt>
+    <dd>{{if .Summary.Total}}{{fmtTime .Summary.NewestEntry}}{{else}}<span class="muted">—</span>{{end}}</dd>
+  </dl>
+</div>
+
+<div class="card">
+  <h2>Body capture</h2>
+  <p class="muted" style="margin-bottom:.7rem">
+    Set with <code>REQLOG_CAPTURE</code> in <code>.env</code> (restart required), because it
+    changes what personal data is written to disk — not something to flip from a web page by accident.
+  </p>
+  <dl class="kv">
+    <dt>Mode</dt>
+    <dd><strong>{{.Capture}}</strong>
+      {{if eq .Capture "errors"}}— bodies stored only for responses with status 400 or above{{end}}
+      {{if eq .Capture "none"}}— no response bodies are ever stored{{end}}
+      {{if eq .Capture "all"}}— every response body is stored, still capped{{end}}
+    </dd>
+    <dt>Size cap</dt><dd>{{fmtBytes .MaxBody}} per body, gzip-compressed</dd>
+  </dl>
+</div>
+{{template "foot"}}
+{{end}}

@@ -1,0 +1,44 @@
+{{define "entry.html"}}
+{{template "head" (dict "Title" "Request detail" "Prefix" .Prefix)}}
+<p style="margin-bottom:.8rem"><a href="{{.Prefix}}/">← Back to requests</a></p>
+<h1>Request #{{.E.ID}}</h1>
+
+<div class="card">
+  <dl class="kv">
+    <dt>Time</dt><dd>{{fmtTime .E.At}}</dd>
+    <dt>Method</dt><dd>{{.E.Method}}</dd>
+    <dt>Path</dt><dd>{{.E.Path}}</dd>
+    <dt>Query</dt><dd>{{if .E.Query}}{{.E.Query}}{{else}}<span class="muted">—</span>{{end}}</dd>
+    <dt>Status</dt><dd><span class="pill {{statusClass .E.Status}}">{{.E.Status}}</span></dd>
+    <dt>Duration</dt><dd>{{fmtMS .E.Duration}}</dd>
+    <dt>Response size</dt><dd>{{fmtBytes .E.RespBytes}}</dd>
+    <dt>Request size</dt><dd>{{fmtBytes .E.ReqBytes}}</dd>
+    <dt>Client IP</dt><dd>{{if .E.IP}}{{.E.IP}}{{else}}<span class="muted">—</span>{{end}}</dd>
+    <dt>User agent</dt><dd>{{if .E.UserAgent}}{{.E.UserAgent}}{{else}}<span class="muted">—</span>{{end}}</dd>
+    {{if .E.Err}}<dt>Error</dt><dd>{{.E.Err}}</dd>{{end}}
+  </dl>
+</div>
+
+<div class="card">
+  <h2>Response body</h2>
+  {{if .E.BodyStored}}
+    {{if .E.Truncated}}
+    <div class="note warn">
+      Truncated for storage — the client received the full {{fmtBytes .E.RespBytes}}.
+    </div>
+    {{end}}
+    {{if .IsText}}
+      <pre>{{.Body}}</pre>
+    {{else}}
+      <p class="muted">Stored body is not valid UTF-8 (binary), so it is not shown here.</p>
+    {{end}}
+  {{else}}
+    <p class="muted">
+      No body stored for this request. Successful responses are not kept by default —
+      they can be megabytes of base64 image data and carry personal data of the accounts
+      looked up. Change this under <a href="{{.Prefix}}/settings">Settings</a>.
+    </p>
+  {{end}}
+</div>
+{{template "foot"}}
+{{end}}
