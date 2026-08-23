@@ -956,3 +956,80 @@ func TestStore_StorageIsZoneIndependent(t *testing.T) {
 	assert.True(t, first[0].At.Equal(second[0].At),
 		"the stored instant must not depend on the display zone")
 }
+
+// ---- unlimited body capture --------------------------------------------
+
+func TestConfig_ZeroMaxBodyUsesDefaultNotUnlimited(t *testing.T) {
+	// The zero-value Config must stay bounded: an accidental unbounded
+	// default would let one response fill the disk.
+	s := newTestStore(t)
+	assert.Equal(t, DefaultMaxBodyBytes, s.MaxBodyBytes(),
+		"an unset cap must fall back to the default, never to unlimited")
+}
+
+func TestMiddleware_Unlimited_StoresResponseWhole(t *testing.T) {
+	s := newTestStore(t, func(c *Config) {
+		c.Capture = CaptureAll
+		c.MaxBodyBytes = Unlimited
+	})
+
+	// Comfortably past the old 32 KB cap, and past the 63.5 KB that was
+	// being truncated in practice.
+	big := strings.Repeat("abcdefghij", 20_000) // 200 KB
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(big))
+	})
+	serve(t, s, h, httptest.NewRequest("GET", "/big", nil))
+	waitWritten(t, s, 1)
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.False(t, list[0].Truncated, "nothing should be flagged truncated")
+	assert.Equal(t, int64(len(big)), list[0].RespBytes)
+
+	full, err := s.Get(list[0].ID)
+	require.NoError(t, err)
+	assert.Equal(t, len(big), len(full.Body), "the whole body must be stored")
+	assert.Equal(t, big, string(full.Body), "and survive the gzip round trip byte-for-byte")
+}
+
+func TestMiddleware_Unlimited_StoresRequestBodyWhole(t *testing.T) {
+	s := newTestStore(t, func(c *Config) {
+		c.Capture = CaptureAll
+		c.MaxBodyBytes = Unlimited
+	})
+
+	payload := strings.Repeat("payload-", 20_000) // 160 KB
+	var seen string
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		seen = string(b)
+		w.WriteHeader(200)
+	})
+	serve(t, s, h, httptest.NewRequest("POST", "/big", strings.NewReader(payload)))
+	waitWritten(t, s, 1)
+
+	assert.Equal(t, payload, seen, "the handler still receives the whole body")
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	full, err := s.Get(list[0].ID)
+	require.NoError(t, err)
+	assert.False(t, full.ReqTruncated)
+	assert.Equal(t, payload, string(full.ReqBody))
+}
+
+// Unlimited must not defeat the gzip storage — a large repetitive body should
+// still occupy far less on disk than in memory.
+func TestUnlimited_StillCompresses(t *testing.T) {
+	body := []byte(strings.Repeat(`{"field":"value","n":12345}`, 5000)) // ~135 KB
+	gz, err := gzipBytes(body)
+	require.NoError(t, err)
+	assert.Less(t, len(gz), len(body)/10,
+		"repetitive JSON should compress by well over 10x: %d from %d", len(gz), len(body))
+
+	back, err := gunzipBytes(gz)
+	require.NoError(t, err)
+	assert.Equal(t, body, back)
+}

@@ -121,16 +121,21 @@ func (rc *recorder) Write(b []byte) (int, error) {
 	n, err := rc.ResponseWriter.Write(b)
 	rc.written += int64(n)
 
-	if rc.capture && rc.limit > 0 {
-		remaining := rc.limit - len(rc.buf)
-		if remaining > 0 {
-			take := b[:min(len(b), remaining)]
-			rc.buf = append(rc.buf, take...)
-			if len(take) < len(b) {
+	if rc.capture {
+		switch {
+		case rc.limit == Unlimited:
+			rc.buf = append(rc.buf, b...)
+		case rc.limit > 0:
+			remaining := rc.limit - len(rc.buf)
+			if remaining > 0 {
+				take := b[:min(len(b), remaining)]
+				rc.buf = append(rc.buf, take...)
+				if len(take) < len(b) {
+					rc.truncated = true
+				}
+			} else {
 				rc.truncated = true
 			}
-		} else {
-			rc.truncated = true
 		}
 	}
 	return n, err
@@ -237,13 +242,24 @@ func renderHeaders(h http.Header) string {
 // just to log a fraction of it. Whatever is left unread is streamed straight
 // through to the handler rather than discarded.
 func drainBody(r *http.Request, limit int) (body []byte, truncated bool) {
-	if r.Body == nil || r.Body == http.NoBody || limit <= 0 {
+	if r.Body == nil || r.Body == http.NoBody || limit == 0 {
 		return nil, false
 	}
 	// GET/HEAD/DELETE conventionally carry no body; skip the allocation.
 	switch r.Method {
 	case http.MethodGet, http.MethodHead, http.MethodDelete, http.MethodOptions:
 		return nil, false
+	}
+
+	if limit == Unlimited {
+		all, err := io.ReadAll(r.Body)
+		if err != nil {
+			// Hand back what was read; the handler sees the same stream end.
+			r.Body = readCloser{bytes.NewReader(all), r.Body}
+			return all, false
+		}
+		r.Body = readCloser{bytes.NewReader(all), r.Body}
+		return all, false
 	}
 
 	buf := make([]byte, limit)

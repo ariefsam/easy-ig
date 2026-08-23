@@ -48,7 +48,17 @@
       {{if eq .Capture "none"}}— no response bodies are ever stored{{end}}
       {{if eq .Capture "all"}}— every response body is stored, still capped{{end}}
     </dd>
-    <dt>Size cap</dt><dd>{{fmtBytes .MaxBody}} per body, gzip-compressed</dd>
+    <dt>Size cap</dt>
+    <dd>
+      {{if .Unlimited}}
+        <strong>None</strong> — bodies are stored whole, gzip-compressed.
+        Watch the database size above: a single response from an endpoint that
+        embeds base64 images can be megabytes, and base64 image data barely
+        compresses.
+      {{else}}{{fmtBytes .MaxBody}} per body, gzip-compressed.
+        Set <code>REQLOG_MAX_BODY_BYTES=0</code> to store bodies whole.
+      {{end}}
+    </dd>
   </dl>
 </div>
 {{template "foot"}}

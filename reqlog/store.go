@@ -43,6 +43,12 @@ import (
 // there is a reason to.
 type CaptureMode string
 
+// Unlimited, as MaxBodyBytes, stores bodies whole with no cap.
+const Unlimited = -1
+
+// DefaultMaxBodyBytes is the cap applied when none is configured.
+const DefaultMaxBodyBytes = 32 << 10
+
 const (
 	CaptureNone   CaptureMode = "none"   // never store bodies
 	CaptureErrors CaptureMode = "errors" // store only when status >= 400
@@ -98,6 +104,10 @@ type Config struct {
 	Capture CaptureMode
 	// MaxBodyBytes caps a stored body. Larger bodies are truncated and
 	// flagged; RespBytes still reports the true size.
+	//
+	// Zero means "use the default". Use Unlimited to store bodies whole —
+	// note that removes the only bound on how large a single row can get,
+	// and /username-with-base64-image can return megabytes.
 	MaxBodyBytes int
 	// QueueSize bounds the async write buffer.
 	QueueSize int
@@ -120,8 +130,10 @@ func (c *Config) applyDefaults() {
 	if c.Capture == "" {
 		c.Capture = CaptureErrors
 	}
-	if c.MaxBodyBytes <= 0 {
-		c.MaxBodyBytes = 32 << 10
+	// Zero is "unset" rather than "unlimited" so the zero-value Config keeps
+	// a safe bound; Unlimited has to be asked for by name.
+	if c.MaxBodyBytes == 0 {
+		c.MaxBodyBytes = DefaultMaxBodyBytes
 	}
 	if c.QueueSize <= 0 {
 		c.QueueSize = 1024
@@ -338,6 +350,9 @@ func (s *Store) Close() error {
 }
 
 // ---- retention ----------------------------------------------------------
+
+// MaxBodyBytes is the active per-body storage cap, or Unlimited.
+func (s *Store) MaxBodyBytes() int { return s.cfg.MaxBodyBytes }
 
 // Location is the zone timestamps are displayed in and days are bucketed by.
 func (s *Store) Location() *time.Location { return s.loc }

@@ -303,6 +303,7 @@ func (d *Dashboard) handleSettings(w http.ResponseWriter, r *http.Request) {
 		"Retention": d.store.RetentionDays(),
 		"Capture":   string(d.store.cfg.Capture),
 		"MaxBody":   int64(d.store.cfg.MaxBodyBytes), // fmtBytes is int64-typed; templates do not coerce
+		"Unlimited": d.store.MaxBodyBytes() == Unlimited,
 		"DBPath":    d.store.cfg.Path,
 	}
 

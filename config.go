@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
+
+	"gitlab.com/ariefhidayatulloh/easy-ig/reqlog"
 )
 
 type Config struct {
@@ -62,7 +64,7 @@ func LoadConfig() (data Config) {
 	data.ReqLog.DBPath = envStr("REQLOG_DB", "logs/reqlog.db")
 	data.ReqLog.RetentionDays = envInt("REQLOG_RETENTION_DAYS", 14)
 	data.ReqLog.Capture = envStr("REQLOG_CAPTURE", "errors")
-	data.ReqLog.MaxBodyBytes = envInt("REQLOG_MAX_BODY_BYTES", 32*1024)
+	data.ReqLog.MaxBodyBytes = envMaxBody("REQLOG_MAX_BODY_BYTES", 32*1024)
 	data.ReqLog.QueueSize = envInt("REQLOG_QUEUE_SIZE", 1024)
 	data.ReqLog.TimeZone = envStr("REQLOG_TZ", "Asia/Jakarta")
 
@@ -89,11 +91,19 @@ func (c Config) String() string {
 		" ReqLog.DBPath:" + c.ReqLog.DBPath +
 		" ReqLog.RetentionDays:" + strconv.Itoa(c.ReqLog.RetentionDays) +
 		" ReqLog.Capture:" + c.ReqLog.Capture +
+		" ReqLog.MaxBody:" + maxBodyLabel(c.ReqLog.MaxBodyBytes) +
 		" DashboardAddr:" + orUnset(c.ReqLog.DashboardAddr) +
 		" DashboardUser:" + c.ReqLog.DashboardUser +
 		" DashboardPasswordHash:" + mask(c.ReqLog.DashboardPassHash) +
 		" DashboardSessionSecret:" + mask(c.ReqLog.SessionSecret) +
 		"}"
+}
+
+func maxBodyLabel(n int) string {
+	if n == reqlog.Unlimited {
+		return "unlimited"
+	}
+	return strconv.Itoa(n)
 }
 
 func orUnset(s string) string {
@@ -132,6 +142,26 @@ func envStr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// envMaxBody reads a body cap, mapping 0 / "unlimited" / "none" to
+// reqlog.Unlimited. Zero reads naturally as "no limit" in a config file, but
+// as a Go zero value it must not silently mean unbounded — hence the
+// translation here rather than in the package.
+func envMaxBody(key string, def int) int {
+	raw := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+	switch raw {
+	case "":
+		return def
+	case "0", "unlimited", "none", "-1":
+		return reqlog.Unlimited
+	}
+	v, err := strconv.Atoi(raw)
+	if err != nil || v < 0 {
+		log.Printf("%s=%q is not a byte count, using default %d", key, raw, def)
+		return def
+	}
+	return v
 }
 
 func envInt(key string, def int) int {
