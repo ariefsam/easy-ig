@@ -61,7 +61,10 @@
         <td class="num">{{fmtMS .Duration}}</td>
         <td class="num">{{fmtBytes .RespBytes}}</td>
         <td class="muted">{{.IP}}</td>
-        <td><a href="{{$.Prefix}}/entry?id={{.ID}}">detail{{if .BodyStored}} + body{{end}}</a></td>
+        <td>
+          <a href="{{$.Prefix}}/entry?id={{.ID}}">detail{{if .BodyStored}} + body{{end}}</a>
+          {{if .Err}}<span class="pill s5" title="{{.Err}}">why</span>{{end}}
+        </td>
       </tr>
       {{else}}
       <tr><td colspan="9" class="muted" style="padding:1.2rem">No entries match this filter.</td></tr>

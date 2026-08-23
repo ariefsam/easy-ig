@@ -9,6 +9,8 @@ import (
 	"net/http"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
+
+	"gitlab.com/ariefhidayatulloh/easy-ig/reqlog"
 )
 
 func getIgProfileWithBase64Image(r *http.Request, username string) (p instagram.ProfileWithBase64Image, clientError map[string]string, systemError error) {
@@ -93,6 +95,7 @@ func UsernameWithBase64ImageHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 		log.Println("system error")
+		reqlog.Notef(r, "username-with-base64-image: %v", err)
 		JSONView(w, r, map[string]string{"error": "system error"}, http.StatusInternalServerError)
 		return
 	}

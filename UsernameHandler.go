@@ -16,6 +16,8 @@ import (
 	"gitlab.com/ariefhidayatulloh/easy-ig/apify"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
 	"gitlab.com/ariefhidayatulloh/easy-ig/webprofile"
+
+	"gitlab.com/ariefhidayatulloh/easy-ig/reqlog"
 )
 
 type Instagram struct {
@@ -322,6 +324,9 @@ func UsernameHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 		log.Println("system error")
+		// The client body stays deliberately vague; the real cause goes to
+		// the request log so the dashboard entry is diagnosable.
+		reqlog.Notef(r, "GetWebProfile(%s): %v", username, err)
 		JSONView(w, r, map[string]string{"error": "system error"}, http.StatusInternalServerError)
 		return
 	}
@@ -364,6 +369,7 @@ func UsernameHandlerApify(w http.ResponseWriter, r *http.Request) {
 	profile, err := apify.Username(data.Username)
 	if err != nil {
 		log.Println(err)
+		reqlog.Notef(r, "apify.Username(%s): %v", data.Username, err)
 		JSONView(w, r, map[string]string{"error": "system error"}, http.StatusInternalServerError)
 	}
 

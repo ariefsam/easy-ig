@@ -23,6 +23,10 @@ func (s *Store) Middleware(next http.Handler) http.Handler {
 			limit:          s.cfg.MaxBodyBytes,
 		}
 
+		// Handlers can attach internal detail via reqlog.Note, so a response
+		// body of {"error":"system error"} still leaves a diagnosable entry.
+		r, notes := withNotes(r)
+
 		next.ServeHTTP(rec, r)
 
 		// For CaptureErrors the decision can only be made after the handler
@@ -48,6 +52,7 @@ func (s *Store) Middleware(next http.Handler) http.Handler {
 			RespBytes: rec.written,
 			IP:        clientIP(r),
 			UserAgent: r.UserAgent(),
+			Err:       notes.String(),
 		}
 		if keep && rec.buf != nil {
 			e.Body = rec.buf

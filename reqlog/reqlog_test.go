@@ -1,6 +1,7 @@
 package reqlog
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -44,6 +45,22 @@ func recordSync(t *testing.T, s *Store, entries ...*Entry) {
 		if time.Now().After(deadline) {
 			got, dropped := s.WriterStats()
 			t.Fatalf("writer did not drain: written=%d want=%d dropped=%d", got, want, dropped)
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+}
+
+// waitWritten blocks until the async writer has persisted n entries.
+func waitWritten(t *testing.T, s *Store, n int64) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		if got, _ := s.WriterStats(); got >= n {
+			return
+		}
+		if time.Now().After(deadline) {
+			got, dropped := s.WriterStats()
+			t.Fatalf("writer did not reach %d: written=%d dropped=%d", n, got, dropped)
 		}
 		time.Sleep(2 * time.Millisecond)
 	}
@@ -614,4 +631,78 @@ func TestStore_DataSurvivesReopen(t *testing.T) {
 	full, err := s2.Get(list[0].ID)
 	require.NoError(t, err)
 	assert.Equal(t, `{"teapot":true}`, string(full.Body), "body must still decompress")
+}
+
+// ---- internal error notes ----------------------------------------------
+
+// The whole point: a vague client body still yields a diagnosable entry.
+func TestMiddleware_CapturesHandlerNote(t *testing.T) {
+	s := newTestStore(t)
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		Notef(r, "GetWebProfile(%s): %v", "someuser", errors.New("proxy timeout after 20s"))
+		w.WriteHeader(500)
+		_, _ = w.Write([]byte(`{"error":"system error"}`))
+	})
+	serve(t, s, h, httptest.NewRequest("GET", "/username?username=someuser", nil))
+	waitWritten(t, s, 1)
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Contains(t, list[0].Err, "proxy timeout after 20s",
+		"the internal cause must be recorded")
+	assert.Contains(t, list[0].Err, "someuser")
+
+	full, err := s.Get(list[0].ID)
+	require.NoError(t, err)
+	assert.Contains(t, string(full.Body), "system error",
+		"the client body stays generic")
+}
+
+func TestNote_AccumulatesAndIsBounded(t *testing.T) {
+	s := newTestStore(t)
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		Note(r, errors.New("first failure"))
+		Note(r, errors.New("second failure"))
+		Note(r, nil)           // ignored
+		Notef(r, "  %s  ", "") // blank after trimming, ignored
+		for i := 0; i < 50; i++ {
+			Notef(r, "retry %d", i)
+		}
+		w.WriteHeader(502)
+	})
+	serve(t, s, h, httptest.NewRequest("GET", "/x", nil))
+	waitWritten(t, s, 1)
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+
+	assert.Contains(t, list[0].Err, "first failure")
+	assert.Contains(t, list[0].Err, "second failure")
+	assert.LessOrEqual(t, strings.Count(list[0].Err, "|"), 20,
+		"notes must be bounded so a retry loop cannot grow the row without limit")
+}
+
+// Call sites must not need to know whether logging is even enabled.
+func TestNote_IsNoOpWithoutMiddleware(t *testing.T) {
+	req := httptest.NewRequest("GET", "/x", nil)
+	assert.NotPanics(t, func() {
+		Note(req, errors.New("nowhere to go"))
+		Notef(req, "also %s", "fine")
+		Note(nil, errors.New("nil request"))
+		Notef(nil, "nil request")
+	}, "Note must be safe when the request never passed through Middleware")
+}
+
+func TestMiddleware_NoNoteLeavesErrEmpty(t *testing.T) {
+	s := newTestStore(t)
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) })
+	serve(t, s, h, httptest.NewRequest("GET", "/clean", nil))
+	waitWritten(t, s, 1)
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Empty(t, list[0].Err)
 }

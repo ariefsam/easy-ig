@@ -15,9 +15,19 @@
     <dt>Request size</dt><dd>{{fmtBytes .E.ReqBytes}}</dd>
     <dt>Client IP</dt><dd>{{if .E.IP}}{{.E.IP}}{{else}}<span class="muted">—</span>{{end}}</dd>
     <dt>User agent</dt><dd>{{if .E.UserAgent}}{{.E.UserAgent}}{{else}}<span class="muted">—</span>{{end}}</dd>
-    {{if .E.Err}}<dt>Error</dt><dd>{{.E.Err}}</dd>{{end}}
   </dl>
 </div>
+
+{{if .E.Err}}
+<div class="card">
+  <h2>Internal error detail</h2>
+  <p class="muted" style="margin-bottom:.6rem">
+    Recorded by the handler. The client only received the generic response body
+    below — this is the underlying cause.
+  </p>
+  <pre>{{.E.Err}}</pre>
+</div>
+{{end}}
 
 <div class="card">
   <h2>Response body</h2>
