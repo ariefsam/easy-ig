@@ -30,6 +30,30 @@
 {{end}}
 
 <div class="card">
+  <h2>Request</h2>
+  {{if .E.ReqHeaders}}
+  <p class="muted" style="margin-bottom:.5rem">Headers</p>
+  <pre>{{.E.ReqHeaders}}</pre>
+  {{else}}
+  <p class="muted">No headers recorded.</p>
+  {{end}}
+
+  <p class="muted" style="margin:.9rem 0 .5rem">Body</p>
+  {{if .E.ReqBodyStored}}
+    {{if .E.ReqTruncated}}
+    <div class="note warn">Truncated for storage — the handler received the full body.</div>
+    {{end}}
+    {{if .ReqIsText}}<pre>{{.ReqBody}}</pre>
+    {{else}}<p class="muted">Request body is not valid UTF-8 (binary), so it is not shown.</p>{{end}}
+  {{else}}
+    <p class="muted">
+      {{if eq .E.ReqBytes 0}}This request had no body — the parameters are in the query string above.
+      {{else}}No request body stored.{{end}}
+    </p>
+  {{end}}
+</div>
+
+<div class="card">
   <h2>Response body</h2>
   {{if .E.BodyStored}}
     {{if .E.Truncated}}

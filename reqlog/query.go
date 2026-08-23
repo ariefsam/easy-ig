@@ -111,15 +111,17 @@ func (s *Store) Count(f Filter) (int64, error) {
 func (s *Store) Get(id int64) (*Entry, error) {
 	var e Entry
 	var ts, durMS int64
-	var bodyGz []byte
+	var bodyGz, reqBodyGz []byte
 
 	err := s.db.QueryRow(`
 SELECT id, ts, method, path, query, status, dur_ms, req_bytes, resp_bytes,
-       ip, user_agent, err, truncated, body_gz
+       ip, user_agent, err, truncated, body_gz,
+       req_headers, req_body_gz, req_truncated
 FROM requests WHERE id = ?`, id).
 		Scan(&e.ID, &ts, &e.Method, &e.Path, &e.Query, &e.Status, &durMS,
 			&e.ReqBytes, &e.RespBytes, &e.IP, &e.UserAgent, &e.Err,
-			&e.Truncated, &bodyGz)
+			&e.Truncated, &bodyGz,
+			&e.ReqHeaders, &reqBodyGz, &e.ReqTruncated)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -137,6 +139,15 @@ FROM requests WHERE id = ?`, id).
 		} else {
 			e.Body = body
 			e.BodyStored = true
+		}
+	}
+	if len(reqBodyGz) > 0 {
+		body, err := gunzipBytes(reqBodyGz)
+		if err != nil {
+			e.Err = strings.TrimSpace(e.Err + " [stored request body could not be decompressed: " + err.Error() + "]")
+		} else {
+			e.ReqBody = body
+			e.ReqBodyStored = true
 		}
 	}
 	return &e, nil

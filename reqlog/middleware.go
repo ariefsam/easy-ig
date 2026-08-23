@@ -1,8 +1,11 @@
 package reqlog
 
 import (
+	"bytes"
+	"io"
 	"net"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 )
@@ -21,6 +24,15 @@ func (s *Store) Middleware(next http.Handler) http.Handler {
 			status:         http.StatusOK, // Go's default when WriteHeader is never called
 			capture:        s.cfg.Capture == CaptureAll,
 			limit:          s.cfg.MaxBodyBytes,
+		}
+
+		// Request side, captured before the handler consumes the body.
+		reqHeaders := ""
+		var reqBody []byte
+		reqTruncated := false
+		if s.cfg.Capture != CaptureNone {
+			reqHeaders = renderHeaders(r.Header)
+			reqBody, reqTruncated = drainBody(r, s.cfg.MaxBodyBytes)
 		}
 
 		// Handlers can attach internal detail via reqlog.Note, so a response
@@ -58,6 +70,14 @@ func (s *Store) Middleware(next http.Handler) http.Handler {
 			e.Body = rec.buf
 			e.BodyStored = true
 			e.Truncated = rec.truncated
+		}
+		if keep {
+			e.ReqHeaders = reqHeaders
+			if len(reqBody) > 0 {
+				e.ReqBody = reqBody
+				e.ReqBodyStored = true
+				e.ReqTruncated = reqTruncated
+			}
 		}
 		s.Record(e)
 	})
@@ -171,3 +191,86 @@ func clientIP(r *http.Request) string {
 	}
 	return host
 }
+
+// sensitiveHeaders are never recorded. X-RapidAPI-Proxy-Secret is the shared
+// secret guarding the API, so storing it would put a working credential in
+// the log the dashboard displays.
+var sensitiveHeaders = map[string]bool{
+	"x-rapidapi-proxy-secret": true,
+	"authorization":           true,
+	"cookie":                  true,
+	"set-cookie":              true,
+	"proxy-authorization":     true,
+	"x-api-key":               true,
+}
+
+// renderHeaders formats request headers one per line, masking the values of
+// anything credential-bearing while keeping the key visible — knowing a
+// header was present is often the point.
+func renderHeaders(h http.Header) string {
+	if len(h) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(h))
+	for k := range h {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var b strings.Builder
+	for _, k := range keys {
+		if sensitiveHeaders[strings.ToLower(k)] {
+			b.WriteString(k + ": REDACTED\n")
+			continue
+		}
+		for _, v := range h.Values(k) {
+			b.WriteString(k + ": " + v + "\n")
+		}
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// drainBody reads up to limit bytes of the request body and puts it back, so
+// the handler still sees a complete body.
+//
+// Reading is capped: an oversized upload would otherwise be buffered whole
+// just to log a fraction of it. Whatever is left unread is streamed straight
+// through to the handler rather than discarded.
+func drainBody(r *http.Request, limit int) (body []byte, truncated bool) {
+	if r.Body == nil || r.Body == http.NoBody || limit <= 0 {
+		return nil, false
+	}
+	// GET/HEAD/DELETE conventionally carry no body; skip the allocation.
+	switch r.Method {
+	case http.MethodGet, http.MethodHead, http.MethodDelete, http.MethodOptions:
+		return nil, false
+	}
+
+	buf := make([]byte, limit)
+	n, err := io.ReadFull(r.Body, buf)
+	buf = buf[:n]
+
+	if err == io.EOF || err == io.ErrUnexpectedEOF {
+		// Whole body fit within the cap.
+		r.Body = readCloser{io.NopCloser(bytes.NewReader(buf)), r.Body}
+		return buf, false
+	}
+	if err != nil {
+		// Read failed; hand back what we have and let the handler see the rest.
+		r.Body = readCloser{io.MultiReader(bytes.NewReader(buf), r.Body), r.Body}
+		return buf, false
+	}
+	// Filled the cap exactly — there may be more, so the handler gets the
+	// captured prefix followed by the untouched remainder.
+	r.Body = readCloser{io.MultiReader(bytes.NewReader(buf), r.Body), r.Body}
+	return buf, true
+}
+
+// readCloser pairs a replacement reader with the original body's Close, so
+// the underlying connection is still released.
+type readCloser struct {
+	io.Reader
+	orig io.Closer
+}
+
+func (rc readCloser) Close() error { return rc.orig.Close() }

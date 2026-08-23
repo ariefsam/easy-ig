@@ -237,12 +237,20 @@ func (d *Dashboard) handleEntry(w http.ResponseWriter, r *http.Request) {
 			body, isText = string(e.Body), true
 		}
 	}
+	reqBody, reqIsText := "", false
+	if e.ReqBodyStored {
+		if utf8.Valid(e.ReqBody) {
+			reqBody, reqIsText = string(e.ReqBody), true
+		}
+	}
 
 	d.render(w, "entry.html", map[string]any{
-		"Prefix": d.prefix,
-		"E":      e,
-		"Body":   body,
-		"IsText": isText,
+		"Prefix":    d.prefix,
+		"E":         e,
+		"Body":      body,
+		"IsText":    isText,
+		"ReqBody":   reqBody,
+		"ReqIsText": reqIsText,
 	})
 }
 

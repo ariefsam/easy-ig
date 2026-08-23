@@ -1,8 +1,10 @@
 package reqlog
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -705,4 +707,170 @@ func TestMiddleware_NoNoteLeavesErrEmpty(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, list, 1)
 	assert.Empty(t, list[0].Err)
+}
+
+// ---- request-side capture ----------------------------------------------
+
+// The API's shared secret must never reach the log the dashboard displays.
+func TestMiddleware_RedactsSensitiveHeaders(t *testing.T) {
+	s := newTestStore(t, func(c *Config) { c.Capture = CaptureAll })
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) })
+
+	req := httptest.NewRequest("GET", "/username?username=x", nil)
+	req.Header.Set("X-RapidAPI-Proxy-Secret", "the-actual-shared-secret")
+	req.Header.Set("Authorization", "Bearer super-secret-token")
+	req.Header.Set("Cookie", "session=abc123")
+	req.Header.Set("User-Agent", "probe/2.0")
+	req.Header.Set("X-Rapidapi-User", "someuser")
+	serve(t, s, h, req)
+	waitWritten(t, s, 1)
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	full, err := s.Get(list[0].ID)
+	require.NoError(t, err)
+
+	for _, leak := range []string{"the-actual-shared-secret", "super-secret-token", "abc123"} {
+		assert.NotContains(t, full.ReqHeaders, leak, "credential must not be stored")
+	}
+	// The key stays visible — knowing the header was sent is the useful part.
+	assert.Contains(t, full.ReqHeaders, "X-Rapidapi-Proxy-Secret: REDACTED")
+	assert.Contains(t, full.ReqHeaders, "Authorization: REDACTED")
+	// Non-sensitive headers are kept in full.
+	assert.Contains(t, full.ReqHeaders, "probe/2.0")
+	assert.Contains(t, full.ReqHeaders, "someuser")
+}
+
+func TestMiddleware_CapturesRequestBody(t *testing.T) {
+	s := newTestStore(t, func(c *Config) { c.Capture = CaptureAll })
+
+	var seenByHandler string
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		seenByHandler = string(b)
+		w.WriteHeader(200)
+	})
+
+	payload := `{"username":"someone","opts":{"images":true}}`
+	req := httptest.NewRequest("POST", "/username", strings.NewReader(payload))
+	serve(t, s, h, req)
+	waitWritten(t, s, 1)
+
+	assert.Equal(t, payload, seenByHandler,
+		"the handler must still receive the complete body after capture")
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	full, err := s.Get(list[0].ID)
+	require.NoError(t, err)
+	assert.True(t, full.ReqBodyStored)
+	assert.Equal(t, payload, string(full.ReqBody))
+	assert.False(t, full.ReqTruncated)
+}
+
+// Capture must not truncate what the handler sees, only what is stored.
+func TestMiddleware_LargeRequestBodyReachesHandlerIntact(t *testing.T) {
+	const cap = 64
+	s := newTestStore(t, func(c *Config) {
+		c.Capture = CaptureAll
+		c.MaxBodyBytes = cap
+	})
+
+	payload := strings.Repeat("x", 4096)
+	var got string
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		got = string(b)
+		w.WriteHeader(200)
+	})
+	serve(t, s, h, httptest.NewRequest("POST", "/big", strings.NewReader(payload)))
+	waitWritten(t, s, 1)
+
+	assert.Equal(t, payload, got, "handler must get every byte despite the storage cap")
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	full, err := s.Get(list[0].ID)
+	require.NoError(t, err)
+	assert.Len(t, full.ReqBody, cap, "stored request body respects the cap")
+	assert.True(t, full.ReqTruncated, "and says it was truncated")
+}
+
+func TestMiddleware_GetRequestHasNoBodyCapture(t *testing.T) {
+	s := newTestStore(t, func(c *Config) { c.Capture = CaptureAll })
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) })
+	// httptest.NewRequest sets no headers of its own, so set one — a real
+	// request always carries at least a User-Agent.
+	req := httptest.NewRequest("GET", "/username?username=x", nil)
+	req.Header.Set("User-Agent", "probe/3.0")
+	serve(t, s, h, req)
+	waitWritten(t, s, 1)
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	full, err := s.Get(list[0].ID)
+	require.NoError(t, err)
+	assert.False(t, full.ReqBodyStored, "a GET carries no body to capture")
+	assert.Contains(t, full.ReqHeaders, "probe/3.0", "headers are still recorded")
+}
+
+func TestMiddleware_CaptureNone_SkipsRequestSideEntirely(t *testing.T) {
+	s := newTestStore(t, func(c *Config) { c.Capture = CaptureNone })
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(500) })
+	req := httptest.NewRequest("POST", "/x", strings.NewReader(`{"a":1}`))
+	req.Header.Set("User-Agent", "probe")
+	serve(t, s, h, req)
+	waitWritten(t, s, 1)
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	full, err := s.Get(list[0].ID)
+	require.NoError(t, err)
+	assert.Empty(t, full.ReqHeaders, "capture=none stores no headers")
+	assert.False(t, full.ReqBodyStored)
+}
+
+// A database written by the previous build must gain the new columns rather
+// than fail to open.
+func TestStore_MigratesOlderSchemaInPlace(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/old.db"
+
+	// Build a table shaped like the first release: no request-side columns.
+	raw, err := sql.Open("sqlite", path)
+	require.NoError(t, err)
+	_, err = raw.Exec(`CREATE TABLE requests (
+		id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL,
+		method TEXT NOT NULL, path TEXT NOT NULL, query TEXT NOT NULL DEFAULT '',
+		status INTEGER NOT NULL, dur_ms INTEGER NOT NULL,
+		req_bytes INTEGER NOT NULL DEFAULT 0, resp_bytes INTEGER NOT NULL DEFAULT 0,
+		ip TEXT NOT NULL DEFAULT '', user_agent TEXT NOT NULL DEFAULT '',
+		err TEXT NOT NULL DEFAULT '', truncated INTEGER NOT NULL DEFAULT 0,
+		body_gz BLOB)`)
+	require.NoError(t, err)
+	_, err = raw.Exec(`INSERT INTO requests (ts, method, path, status, dur_ms)
+	                   VALUES (?, 'GET', '/legacy', 200, 5)`, time.Now().UnixMilli())
+	require.NoError(t, err)
+	require.NoError(t, raw.Close())
+
+	// Opening must migrate, not error, and the old row must survive.
+	s, err := Open(Config{Path: path})
+	require.NoError(t, err, "an older database must be upgraded in place")
+	defer s.Close()
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, "/legacy", list[0].Path)
+
+	// And the new columns work.
+	recordSync(t, s, &Entry{At: time.Now(), Method: "POST", Path: "/new", Status: 200,
+		ReqHeaders: "X-Test: yes", ReqBody: []byte(`{"a":1}`), ReqBodyStored: true})
+	got, err := s.List(Filter{Path: "/new"})
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	full, err := s.Get(got[0].ID)
+	require.NoError(t, err)
+	assert.Equal(t, "X-Test: yes", full.ReqHeaders)
+	assert.Equal(t, `{"a":1}`, string(full.ReqBody))
 }

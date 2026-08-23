@@ -74,6 +74,13 @@ type Entry struct {
 	Body       []byte // uncompressed; nil when not captured
 	BodyStored bool
 	Truncated  bool
+
+	// Request side. ReqHeaders is a redacted rendering; ReqBody is the
+	// uncompressed request body, nil when absent or not captured.
+	ReqHeaders    string
+	ReqBody       []byte
+	ReqBodyStored bool
+	ReqTruncated  bool
 }
 
 // Config configures a Store.
@@ -183,7 +190,10 @@ CREATE TABLE IF NOT EXISTS requests (
 	user_agent  TEXT    NOT NULL DEFAULT '',
 	err         TEXT    NOT NULL DEFAULT '',
 	truncated   INTEGER NOT NULL DEFAULT 0,
-	body_gz     BLOB                -- NULL when not captured
+	body_gz     BLOB,               -- NULL when not captured
+	req_headers TEXT    NOT NULL DEFAULT '',
+	req_body_gz BLOB,               -- NULL when absent or not captured
+	req_truncated INTEGER NOT NULL DEFAULT 0
 );
 -- ts leads every dashboard query (recent-first listing, range filters, and
 -- the retention DELETE), so it carries the index.
@@ -198,7 +208,44 @@ CREATE TABLE IF NOT EXISTS settings (
 	if _, err := s.db.Exec(schema); err != nil {
 		return fmt.Errorf("reqlog: migrate: %w", err)
 	}
+
+	// Columns added after the first release. SQLite has no
+	// "ADD COLUMN IF NOT EXISTS", so check first — a database created by an
+	// older build is upgraded in place rather than rebuilt.
+	existing, err := s.columns("requests")
+	if err != nil {
+		return err
+	}
+	for _, add := range []struct{ name, ddl string }{
+		{"req_headers", `ALTER TABLE requests ADD COLUMN req_headers TEXT NOT NULL DEFAULT ''`},
+		{"req_body_gz", `ALTER TABLE requests ADD COLUMN req_body_gz BLOB`},
+		{"req_truncated", `ALTER TABLE requests ADD COLUMN req_truncated INTEGER NOT NULL DEFAULT 0`},
+	} {
+		if existing[add.name] {
+			continue
+		}
+		if _, err := s.db.Exec(add.ddl); err != nil {
+			return fmt.Errorf("reqlog: add column %s: %w", add.name, err)
+		}
+	}
 	return nil
+}
+
+func (s *Store) columns(table string) (map[string]bool, error) {
+	rows, err := s.db.Query(`SELECT name FROM pragma_table_info(?)`, table)
+	if err != nil {
+		return nil, fmt.Errorf("reqlog: inspect %s: %w", table, err)
+	}
+	defer rows.Close()
+	out := map[string]bool{}
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			return nil, err
+		}
+		out[n] = true
+	}
+	return out, rows.Err()
 }
 
 // Record queues an entry. Never blocks; drops when the queue is full.
@@ -238,13 +285,24 @@ func (s *Store) insert(e *Entry) error {
 		}
 		bodyGz = gz
 	}
+	var reqBodyGz any
+	if e.ReqBodyStored && len(e.ReqBody) > 0 {
+		gz, err := gzipBytes(e.ReqBody)
+		if err != nil {
+			return fmt.Errorf("gzip request body: %w", err)
+		}
+		reqBodyGz = gz
+	}
+
 	_, err := s.db.Exec(`
 INSERT INTO requests (ts, method, path, query, status, dur_ms, req_bytes,
-                      resp_bytes, ip, user_agent, err, truncated, body_gz)
-VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                      resp_bytes, ip, user_agent, err, truncated, body_gz,
+                      req_headers, req_body_gz, req_truncated)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		e.At.UnixMilli(), e.Method, e.Path, e.Query, e.Status,
 		e.Duration.Milliseconds(), e.ReqBytes, e.RespBytes,
-		e.IP, e.UserAgent, e.Err, boolToInt(e.Truncated), bodyGz)
+		e.IP, e.UserAgent, e.Err, boolToInt(e.Truncated), bodyGz,
+		e.ReqHeaders, reqBodyGz, boolToInt(e.ReqTruncated))
 	return err
 }
 
