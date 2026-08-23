@@ -28,6 +28,10 @@ type Config struct {
 		MaxBodyBytes  int
 		QueueSize     int
 
+		// DashboardAddr, when set, serves the dashboard on its own
+		// listener instead of the public API port. Bind it to
+		// 127.0.0.1 and front it with TLS.
+		DashboardAddr     string
 		DashboardPrefix   string
 		DashboardUser     string
 		DashboardPassHash string
@@ -60,6 +64,7 @@ func LoadConfig() (data Config) {
 	data.ReqLog.MaxBodyBytes = envInt("REQLOG_MAX_BODY_BYTES", 32*1024)
 	data.ReqLog.QueueSize = envInt("REQLOG_QUEUE_SIZE", 1024)
 
+	data.ReqLog.DashboardAddr = os.Getenv("DASHBOARD_ADDR")
 	data.ReqLog.DashboardPrefix = envStr("DASHBOARD_PREFIX", "/logs")
 	data.ReqLog.DashboardUser = os.Getenv("DASHBOARD_USER")
 	data.ReqLog.DashboardPassHash = os.Getenv("DASHBOARD_PASSWORD_HASH")
@@ -82,10 +87,18 @@ func (c Config) String() string {
 		" ReqLog.DBPath:" + c.ReqLog.DBPath +
 		" ReqLog.RetentionDays:" + strconv.Itoa(c.ReqLog.RetentionDays) +
 		" ReqLog.Capture:" + c.ReqLog.Capture +
+		" DashboardAddr:" + orUnset(c.ReqLog.DashboardAddr) +
 		" DashboardUser:" + c.ReqLog.DashboardUser +
 		" DashboardPasswordHash:" + mask(c.ReqLog.DashboardPassHash) +
 		" DashboardSessionSecret:" + mask(c.ReqLog.SessionSecret) +
 		"}"
+}
+
+func orUnset(s string) string {
+	if s == "" {
+		return "<same port as API>"
+	}
+	return s
 }
 
 func mask(s string) string {

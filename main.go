@@ -38,8 +38,36 @@ func main() {
 	api.Path("/get-post").HandlerFunc(GetPostByShortcodeHandler)
 	api.Path("/get-post-with-base64-image").HandlerFunc(GetPostByShortcodeHandler)
 
-	store, shutdownReqLog := setupRequestLog(api)
+	store, dash, shutdownReqLog := setupRequestLog(api)
 	defer shutdownReqLog()
+
+	// Where the dashboard is served decides whether it is exposed.
+	//
+	// The API port is public, so mounting the dashboard on it would leave the
+	// logs reachable at http://<host>:<port>/logs over plain HTTP, bypassing
+	// any TLS front end. With DASHBOARD_ADDR set (bind to 127.0.0.1) the
+	// dashboard is only reachable through whatever proxies to it.
+	var dashSrv *http.Server
+	if dash != nil {
+		if addr := config.ReqLog.DashboardAddr; addr != "" {
+			dashSrv = &http.Server{
+				Handler:      dash.Handler(),
+				Addr:         addr,
+				ReadTimeout:  30 * time.Second,
+				WriteTimeout: 30 * time.Second,
+			}
+			go func() {
+				log.Printf("reqlog: dashboard listening on %s (path %s)", addr, dash.Prefix())
+				if err := dashSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+					log.Printf("reqlog: dashboard listener: %v", err)
+				}
+			}()
+		} else {
+			router.PathPrefix(dash.Prefix()).Handler(dash.Handler())
+			log.Printf("reqlog: dashboard on the API port at %s — set DASHBOARD_ADDR "+
+				"to 127.0.0.1:PORT to keep it off the public port", dash.Prefix())
+		}
+	}
 
 	// Added after the request logger so the logger sits outside it, and a
 	// rejected request (401, missing secret) is still recorded.
@@ -69,6 +97,11 @@ func main() {
 		if err := srv.Shutdown(ctx); err != nil {
 			log.Printf("graceful shutdown: %v", err)
 		}
+		if dashSrv != nil {
+			if err := dashSrv.Shutdown(ctx); err != nil {
+				log.Printf("graceful shutdown (dashboard): %v", err)
+			}
+		}
 		if store != nil {
 			if w, d := store.WriterStats(); d > 0 {
 				log.Printf("reqlog: %d written, %d dropped this run", w, d)
@@ -91,11 +124,11 @@ func main() {
 // exception. A misconfigured dashboard is fatal, because the alternative is
 // a service that looks healthy while request logs sit behind broken or
 // absent authentication.
-func setupRequestLog(api *mux.Router) (*reqlog.Store, func()) {
+func setupRequestLog(api *mux.Router) (*reqlog.Store, *reqlog.Dashboard, func()) {
 	noop := func() {}
 	if !config.ReqLog.Enabled {
 		log.Println("reqlog: disabled (set REQLOG_ENABLED=true to turn on)")
-		return nil, noop
+		return nil, nil, noop
 	}
 
 	store, err := reqlog.Open(reqlog.Config{
@@ -107,7 +140,7 @@ func setupRequestLog(api *mux.Router) (*reqlog.Store, func()) {
 	})
 	if err != nil {
 		log.Printf("reqlog: disabled — %v", err)
-		return nil, noop
+		return nil, nil, noop
 	}
 
 	api.Use(store.MiddlewareFunc())
@@ -133,16 +166,10 @@ func setupRequestLog(api *mux.Router) (*reqlog.Store, func()) {
 	// above and logged "database is closed".
 	ctx, cancelRetention := context.WithCancel(context.Background())
 	go store.RunRetention(ctx, 24*time.Hour)
-	// Mounted on the parent router: the dashboard must stay clear of both the
-	// RapidAPI guard and the request logger, so browsing logs does not
-	// generate log entries about browsing logs.
-	router.PathPrefix(dash.Prefix()).Handler(dash.Handler())
+	log.Printf("reqlog: recording to %s (retention %d day(s), capture %q)",
+		config.ReqLog.DBPath, store.RetentionDays(), config.ReqLog.Capture)
 
-	log.Printf("reqlog: recording to %s (retention %d day(s), capture %q), dashboard at %s",
-		config.ReqLog.DBPath, store.RetentionDays(),
-		config.ReqLog.Capture, dash.Prefix())
-
-	return store, func() {
+	return store, dash, func() {
 		cancelRetention()
 		if err := store.Close(); err != nil {
 			log.Printf("reqlog: close: %v", err)
