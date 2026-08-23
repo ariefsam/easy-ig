@@ -5,7 +5,7 @@
 
 <div class="card">
   <dl class="kv">
-    <dt>Time</dt><dd>{{fmtTime .E.At}}</dd>
+    <dt>Time</dt><dd>{{fmtTime .E.At}} <span class="muted">{{zone}}</span></dd>
     <dt>Method</dt><dd>{{.E.Method}}</dd>
     <dt>Path</dt><dd>{{.E.Path}}</dd>
     <dt>Query</dt><dd>{{if .E.Query}}{{.E.Query}}{{else}}<span class="muted">—</span>{{end}}</dd>

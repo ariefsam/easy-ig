@@ -28,8 +28,14 @@ type Dashboard struct {
 func NewDashboard(store *Store, auth *Auth, prefix string) (*Dashboard, error) {
 	prefix = "/" + strings.Trim(prefix, "/")
 
+	loc := store.Location()
+	zoneName, _ := time.Now().In(loc).Zone()
+
 	funcs := template.FuncMap{
-		"fmtTime":  func(t time.Time) string { return t.Local().Format("2006-01-02 15:04:05") },
+		// Explicit zone rather than t.Local(): the server runs in UTC, so
+		// Local() rendered UTC and every timestamp read seven hours early.
+		"fmtTime":  func(t time.Time) string { return t.In(loc).Format("2006-01-02 15:04:05") },
+		"zone":     func() string { return zoneName },
 		"fmtBytes": humanBytes,
 		"fmtMS":    func(d time.Duration) string { return fmt.Sprintf("%d ms", d.Milliseconds()) },
 		"pct":      func(f float64) string { return fmt.Sprintf("%.1f%%", f) },

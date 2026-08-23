@@ -25,6 +25,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	// Embedded zone database: LoadLocation("Asia/Jakarta") then works even on
+	// a host without /usr/share/zoneinfo, which a scratch container lacks.
+	_ "time/tzdata"
+
 	_ "modernc.org/sqlite" // pure-Go driver: no CGO, so cross-compiling stays trivial
 )
 
@@ -97,6 +101,13 @@ type Config struct {
 	MaxBodyBytes int
 	// QueueSize bounds the async write buffer.
 	QueueSize int
+	// TimeZone names the zone used to display timestamps and to decide day
+	// boundaries in the per-day statistics. Defaults to Asia/Jakarta.
+	//
+	// This is a presentation choice only — rows are always stored as UTC
+	// milliseconds, so changing it reinterprets history rather than
+	// migrating it.
+	TimeZone string
 }
 
 func (c *Config) applyDefaults() {
@@ -115,6 +126,9 @@ func (c *Config) applyDefaults() {
 	if c.QueueSize <= 0 {
 		c.QueueSize = 1024
 	}
+	if c.TimeZone == "" {
+		c.TimeZone = "Asia/Jakarta"
+	}
 }
 
 // Store writes entries to SQLite from a single background goroutine.
@@ -126,6 +140,7 @@ func (c *Config) applyDefaults() {
 type Store struct {
 	db  *sql.DB
 	cfg Config
+	loc *time.Location
 
 	queue   chan *Entry
 	done    chan struct{}
@@ -153,9 +168,18 @@ func Open(cfg Config) (*Store, error) {
 	// One writer goroutine, but the dashboard reads concurrently.
 	db.SetMaxOpenConns(4)
 
+	loc, err := time.LoadLocation(cfg.TimeZone)
+	if err != nil {
+		// Not fatal: fall back to UTC and say so, rather than refusing to
+		// start over a display setting.
+		log.Printf("reqlog: time zone %q could not be loaded (%v) — using UTC", cfg.TimeZone, err)
+		loc = time.UTC
+	}
+
 	s := &Store{
 		db:    db,
 		cfg:   cfg,
+		loc:   loc,
 		queue: make(chan *Entry, cfg.QueueSize),
 		done:  make(chan struct{}),
 	}
@@ -314,6 +338,9 @@ func (s *Store) Close() error {
 }
 
 // ---- retention ----------------------------------------------------------
+
+// Location is the zone timestamps are displayed in and days are bucketed by.
+func (s *Store) Location() *time.Location { return s.loc }
 
 // RetentionDays is the active sliding window in days.
 func (s *Store) RetentionDays() int { return s.cfg.RetentionDays }

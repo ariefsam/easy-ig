@@ -288,12 +288,23 @@ FROM requests`+where+` GROUP BY path ORDER BY c DESC LIMIT ?`, args...)
 }
 
 // PerDay returns the requests-per-day series, oldest first.
+//
+// Days are bucketed in the configured zone, not UTC. Grouping by UTC put a
+// 06:00 Jakarta request on the previous day, which made the series wrong for
+// anyone reading it locally.
+//
+// SQLite has no zone database, so the current offset is applied as a fixed
+// shift. Exact for Jakarta, which has no daylight saving; for a zone that
+// does, days either side of a transition could be off by an hour.
 func (s *Store) PerDay(f Filter) ([]DayCount, error) {
 	where, args := f.where()
+	_, offset := time.Now().In(s.loc).Zone()
+	shift := fmt.Sprintf("%+d seconds", offset)
+
 	rows, err := s.db.Query(`
-SELECT date(ts/1000, 'unixepoch') d, COUNT(*),
+SELECT date(ts/1000, 'unixepoch', ?) d, COUNT(*),
        COALESCE(SUM(CASE WHEN status >= 400 THEN 1 ELSE 0 END), 0)
-FROM requests`+where+` GROUP BY d ORDER BY d ASC`, args...)
+FROM requests`+where+` GROUP BY d ORDER BY d ASC`, append([]any{shift}, args...)...)
 	if err != nil {
 		return nil, fmt.Errorf("reqlog: per day: %w", err)
 	}

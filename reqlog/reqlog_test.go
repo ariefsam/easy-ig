@@ -874,3 +874,85 @@ func TestStore_MigratesOlderSchemaInPlace(t *testing.T) {
 	assert.Equal(t, "X-Test: yes", full.ReqHeaders)
 	assert.Equal(t, `{"a":1}`, string(full.ReqBody))
 }
+
+// ---- time zone ----------------------------------------------------------
+
+func TestStore_DefaultsToJakarta(t *testing.T) {
+	s := newTestStore(t)
+	name, offset := time.Now().In(s.Location()).Zone()
+	assert.Equal(t, "WIB", name)
+	assert.Equal(t, 7*3600, offset, "Asia/Jakarta is UTC+7 year-round")
+}
+
+func TestStore_TimeZoneIsConfigurable(t *testing.T) {
+	s := newTestStore(t, func(c *Config) { c.TimeZone = "UTC" })
+	_, offset := time.Now().In(s.Location()).Zone()
+	assert.Zero(t, offset)
+}
+
+// An unknown zone name must degrade to UTC, not stop the service.
+func TestStore_UnknownTimeZoneFallsBackToUTC(t *testing.T) {
+	s := newTestStore(t, func(c *Config) { c.TimeZone = "Mars/Olympus_Mons" })
+	require.NotNil(t, s.Location())
+	_, offset := time.Now().In(s.Location()).Zone()
+	assert.Zero(t, offset, "an unresolvable zone should fall back to UTC")
+}
+
+// The bug this fixes: grouping by UTC put an early-morning Jakarta request on
+// the previous day.
+func TestStore_PerDay_BucketsByConfiguredZone(t *testing.T) {
+	jakarta, err := time.LoadLocation("Asia/Jakarta")
+	require.NoError(t, err)
+
+	// 06:00 on the 20th in Jakarta is 23:00 on the 19th UTC.
+	early := time.Date(2026, 8, 20, 6, 0, 0, 0, jakarta)
+	require.Equal(t, 19, early.UTC().Day(), "precondition: this instant is the 19th in UTC")
+
+	t.Run("jakarta groups it on the 20th", func(t *testing.T) {
+		s := newTestStore(t, func(c *Config) { c.TimeZone = "Asia/Jakarta" })
+		recordSync(t, s, entryAt(early, 200, "/x"))
+
+		days, err := s.PerDay(Filter{})
+		require.NoError(t, err)
+		require.Len(t, days, 1)
+		assert.Equal(t, "2026-08-20", days[0].Day,
+			"a 06:00 Jakarta request belongs to the Jakarta day")
+	})
+
+	t.Run("utc groups it on the 19th", func(t *testing.T) {
+		s := newTestStore(t, func(c *Config) { c.TimeZone = "UTC" })
+		recordSync(t, s, entryAt(early, 200, "/x"))
+
+		days, err := s.PerDay(Filter{})
+		require.NoError(t, err)
+		require.Len(t, days, 1)
+		assert.Equal(t, "2026-08-19", days[0].Day,
+			"the same instant is the previous day in UTC — which is what made the old behaviour wrong")
+	})
+}
+
+// Storage stays UTC regardless of display zone, so switching zones
+// reinterprets history rather than corrupting it.
+func TestStore_StorageIsZoneIndependent(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/tz.db"
+	instant := time.Date(2026, 8, 20, 6, 0, 0, 0, time.UTC)
+
+	s1, err := Open(Config{Path: path, TimeZone: "Asia/Jakarta"})
+	require.NoError(t, err)
+	recordSync(t, s1, entryAt(instant, 200, "/x"))
+	first, err := s1.List(Filter{})
+	require.NoError(t, err)
+	require.NoError(t, s1.Close())
+
+	s2, err := Open(Config{Path: path, TimeZone: "UTC"})
+	require.NoError(t, err)
+	defer s2.Close()
+	second, err := s2.List(Filter{})
+	require.NoError(t, err)
+
+	require.Len(t, first, 1)
+	require.Len(t, second, 1)
+	assert.True(t, first[0].At.Equal(second[0].At),
+		"the stored instant must not depend on the display zone")
+}

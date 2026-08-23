@@ -27,6 +27,7 @@ type Config struct {
 		Capture       string
 		MaxBodyBytes  int
 		QueueSize     int
+		TimeZone      string
 
 		// DashboardAddr, when set, serves the dashboard on its own
 		// listener instead of the public API port. Bind it to
@@ -63,6 +64,7 @@ func LoadConfig() (data Config) {
 	data.ReqLog.Capture = envStr("REQLOG_CAPTURE", "errors")
 	data.ReqLog.MaxBodyBytes = envInt("REQLOG_MAX_BODY_BYTES", 32*1024)
 	data.ReqLog.QueueSize = envInt("REQLOG_QUEUE_SIZE", 1024)
+	data.ReqLog.TimeZone = envStr("REQLOG_TZ", "Asia/Jakarta")
 
 	data.ReqLog.DashboardAddr = os.Getenv("DASHBOARD_ADDR")
 	data.ReqLog.DashboardPrefix = envStr("DASHBOARD_PREFIX", "/logs")

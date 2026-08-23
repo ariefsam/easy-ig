@@ -137,6 +137,7 @@ func setupRequestLog(api *mux.Router) (*reqlog.Store, *reqlog.Dashboard, func())
 		Capture:       reqlog.ParseCaptureMode(config.ReqLog.Capture),
 		MaxBodyBytes:  config.ReqLog.MaxBodyBytes,
 		QueueSize:     config.ReqLog.QueueSize,
+		TimeZone:      config.ReqLog.TimeZone,
 	})
 	if err != nil {
 		log.Printf("reqlog: disabled — %v", err)

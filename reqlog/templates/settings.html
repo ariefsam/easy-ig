@@ -24,6 +24,7 @@
 <div class="card">
   <h2>Current storage</h2>
   <dl class="kv">
+    <dt>Time zone</dt><dd>{{zone}} — set with REQLOG_TZ</dd>
     <dt>Database file</dt><dd>{{.DBPath}}</dd>
     <dt>Size on disk</dt><dd>{{fmtBytes .Summary.DBBytes}}</dd>
     <dt>Entries stored</dt><dd>{{.Summary.Total}}</dd>
