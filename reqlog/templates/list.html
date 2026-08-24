@@ -21,6 +21,11 @@
       <option value="4xx" {{if eq (qv .Query "status") "4xx"}}selected{{end}}>4xx</option>
       <option value="5xx" {{if eq (qv .Query "status") "5xx"}}selected{{end}}>5xx</option>
     </select>
+    <select name="caller">
+      <option value="">Any caller</option>
+      {{$csel := qv .Query "caller"}}
+      {{range .Callers}}<option value="{{.}}" {{if eq . $csel}}selected{{end}}>{{.}}</option>{{end}}
+    </select>
     <select name="path">
       <option value="">Any path</option>
       {{$sel := qv .Query "path"}}
@@ -46,7 +51,7 @@
   <div style="overflow-x:auto">
   <table>
     <thead><tr>
-      <th>Time <span style="text-transform:none;font-weight:400">({{zone}})</span></th><th>Method</th><th>Path</th><th>Query</th>
+      <th>Time <span style="text-transform:none;font-weight:400">({{zone}})</span></th><th>Caller</th><th>Method</th><th>Path</th><th>Query</th>
       <th class="num">Status</th><th class="num">Duration</th><th class="num">Size</th>
       <th>IP</th><th></th>
     </tr></thead>
@@ -54,6 +59,9 @@
       {{range .Entries}}
       <tr>
         <td class="muted">{{fmtTime .At}}</td>
+        <td>{{if .Caller}}<a href="?caller={{.Caller}}">{{.Caller}}</a>{{if .Plan}}
+              <span class="muted" style="font-size:.75rem">{{.Plan}}</span>{{end}}
+            {{else}}<span class="muted">—</span>{{end}}</td>
         <td>{{.Method}}</td>
         <td>{{.Path}}</td>
         <td class="muted" style="max-width:230px;overflow:hidden;text-overflow:ellipsis">{{.Query}}</td>
@@ -67,7 +75,7 @@
         </td>
       </tr>
       {{else}}
-      <tr><td colspan="9" class="muted" style="padding:1.2rem">No entries match this filter.</td></tr>
+      <tr><td colspan="10" class="muted" style="padding:1.2rem">No entries match this filter.</td></tr>
       {{end}}
     </tbody>
   </table>

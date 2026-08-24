@@ -6,6 +6,9 @@
 <div class="card">
   <dl class="kv">
     <dt>Time</dt><dd>{{fmtTime .E.At}} <span class="muted">{{zone}}</span></dd>
+    <dt>Caller</dt>
+    <dd>{{if .E.Caller}}{{.E.Caller}}{{if .E.Plan}} <span class="muted">({{.E.Plan}} plan)</span>{{end}}
+        {{else}}<span class="muted">— not sent; this request did not come through the RapidAPI gateway</span>{{end}}</dd>
     <dt>Method</dt><dd>{{.E.Method}}</dd>
     <dt>Path</dt><dd>{{.E.Path}}</dd>
     <dt>Query</dt><dd>{{if .E.Query}}{{.E.Query}}{{else}}<span class="muted">—</span>{{end}}</dd>

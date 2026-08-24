@@ -85,6 +85,12 @@ type Entry struct {
 	BodyStored bool
 	Truncated  bool
 
+	// Caller identifies the RapidAPI subscriber, from X-RapidAPI-User, and
+	// Plan their subscription tier. Promoted out of the header blob into
+	// their own columns so they can be filtered and grouped.
+	Caller string
+	Plan   string
+
 	// Request side. ReqHeaders is a redacted rendering; ReqBody is the
 	// uncompressed request body, nil when absent or not captured.
 	ReqHeaders    string
@@ -229,7 +235,9 @@ CREATE TABLE IF NOT EXISTS requests (
 	body_gz     BLOB,               -- NULL when not captured
 	req_headers TEXT    NOT NULL DEFAULT '',
 	req_body_gz BLOB,               -- NULL when absent or not captured
-	req_truncated INTEGER NOT NULL DEFAULT 0
+	req_truncated INTEGER NOT NULL DEFAULT 0,
+	caller      TEXT    NOT NULL DEFAULT '',
+	plan        TEXT    NOT NULL DEFAULT ''
 );
 -- ts leads every dashboard query (recent-first listing, range filters, and
 -- the retention DELETE), so it carries the index.
@@ -256,6 +264,8 @@ CREATE TABLE IF NOT EXISTS settings (
 		{"req_headers", `ALTER TABLE requests ADD COLUMN req_headers TEXT NOT NULL DEFAULT ''`},
 		{"req_body_gz", `ALTER TABLE requests ADD COLUMN req_body_gz BLOB`},
 		{"req_truncated", `ALTER TABLE requests ADD COLUMN req_truncated INTEGER NOT NULL DEFAULT 0`},
+		{"caller", `ALTER TABLE requests ADD COLUMN caller TEXT NOT NULL DEFAULT ''`},
+		{"plan", `ALTER TABLE requests ADD COLUMN plan TEXT NOT NULL DEFAULT ''`},
 	} {
 		if existing[add.name] {
 			continue
@@ -263,6 +273,16 @@ CREATE TABLE IF NOT EXISTS settings (
 		if _, err := s.db.Exec(add.ddl); err != nil {
 			return fmt.Errorf("reqlog: add column %s: %w", add.name, err)
 		}
+	}
+
+	// Indexes on late-added columns must come after the ALTER statements.
+	// Putting this in the schema block above broke opening any database
+	// created by an earlier build: CREATE TABLE IF NOT EXISTS was a no-op on
+	// the existing table, so the index referenced a column that did not exist
+	// yet and migrate() failed outright.
+	if _, err := s.db.Exec(
+		`CREATE INDEX IF NOT EXISTS idx_requests_caller ON requests(caller, ts DESC)`); err != nil {
+		return fmt.Errorf("reqlog: index caller: %w", err)
 	}
 	return nil
 }
@@ -333,12 +353,12 @@ func (s *Store) insert(e *Entry) error {
 	_, err := s.db.Exec(`
 INSERT INTO requests (ts, method, path, query, status, dur_ms, req_bytes,
                       resp_bytes, ip, user_agent, err, truncated, body_gz,
-                      req_headers, req_body_gz, req_truncated)
-VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                      req_headers, req_body_gz, req_truncated, caller, plan)
+VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		e.At.UnixMilli(), e.Method, e.Path, e.Query, e.Status,
 		e.Duration.Milliseconds(), e.ReqBytes, e.RespBytes,
 		e.IP, e.UserAgent, e.Err, boolToInt(e.Truncated), bodyGz,
-		e.ReqHeaders, reqBodyGz, boolToInt(e.ReqTruncated))
+		e.ReqHeaders, reqBodyGz, boolToInt(e.ReqTruncated), e.Caller, e.Plan)
 	return err
 }
 

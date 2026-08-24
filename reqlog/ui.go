@@ -200,6 +200,7 @@ func (d *Dashboard) handleList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	paths, _ := d.store.DistinctPaths()
+	callers, _ := d.store.DistinctCallers()
 	written, dropped := d.store.WriterStats()
 
 	totalPages := int((total + int64(perPage) - 1) / int64(perPage))
@@ -213,6 +214,7 @@ func (d *Dashboard) handleList(w http.ResponseWriter, r *http.Request) {
 		"HasNext":    page < totalPages,
 		"Query":      r.URL.Query(),
 		"Paths":      paths,
+		"Callers":    callers,
 		"Dropped":    dropped,
 		"Written":    written,
 		"Retention":  d.store.RetentionDays(),
@@ -273,9 +275,13 @@ func (d *Dashboard) handleStats(w http.ResponseWriter, r *http.Request) {
 	}
 	statuses, _ := d.store.StatusBreakdown(f)
 	paths, _ := d.store.TopPaths(f, 10)
+	callers, _ := d.store.TopCallers(f, 20)
 	days, _ := d.store.PerDay(f)
 
-	var maxStatus, maxDay int64
+	var maxStatus, maxDay, maxCaller int64
+	for _, c := range callers {
+		maxCaller = max(maxCaller, c.Count)
+	}
 	for _, s := range statuses {
 		maxStatus = max(maxStatus, s.Count)
 	}
@@ -289,6 +295,8 @@ func (d *Dashboard) handleStats(w http.ResponseWriter, r *http.Request) {
 		"Statuses":  statuses,
 		"MaxStatus": maxStatus,
 		"Paths":     paths,
+		"Callers":   callers,
+		"MaxCaller": maxCaller,
 		"Days":      days,
 		"MaxDay":    maxDay,
 		"Query":     r.URL.Query(),
@@ -344,6 +352,7 @@ func filterFromQuery(r *http.Request) (Filter, int, int) {
 	q := r.URL.Query()
 	f := Filter{
 		Path:   q.Get("path"),
+		Caller: q.Get("caller"),
 		Search: strings.TrimSpace(q.Get("q")),
 	}
 

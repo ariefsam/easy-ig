@@ -1033,3 +1033,159 @@ func TestUnlimited_StillCompresses(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, body, back)
 }
+
+// ---- caller identity ----------------------------------------------------
+
+func TestMiddleware_RecordsRapidAPICaller(t *testing.T) {
+	s := newTestStore(t, func(c *Config) { c.Capture = CaptureAll })
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) })
+
+	req := httptest.NewRequest("GET", "/username?username=x", nil)
+	req.Header.Set("X-RapidAPI-User", "xT9akLm2")
+	req.Header.Set("X-RapidAPI-Subscription", "MEGA")
+	serve(t, s, h, req)
+	waitWritten(t, s, 1)
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	assert.Equal(t, "xT9akLm2", list[0].Caller)
+	assert.Equal(t, "MEGA", list[0].Plan)
+}
+
+// The gateway still emits the legacy Mashape names; either must work.
+func TestMiddleware_FallsBackToMashapeHeaders(t *testing.T) {
+	s := newTestStore(t, func(c *Config) { c.Capture = CaptureAll })
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) })
+
+	req := httptest.NewRequest("GET", "/x", nil)
+	req.Header.Set("X-Mashape-User", "legacyUser")
+	req.Header.Set("X-Mashape-Subscription", "PRO")
+	serve(t, s, h, req)
+	waitWritten(t, s, 1)
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	assert.Equal(t, "legacyUser", list[0].Caller)
+	assert.Equal(t, "PRO", list[0].Plan)
+}
+
+func TestStore_FilterByCaller(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now()
+	recordSync(t, s,
+		&Entry{At: now, Method: "GET", Path: "/a", Status: 200, Caller: "alice", Plan: "MEGA"},
+		&Entry{At: now, Method: "GET", Path: "/b", Status: 200, Caller: "alice", Plan: "MEGA"},
+		&Entry{At: now, Method: "GET", Path: "/c", Status: 500, Caller: "bob", Plan: "BASIC"},
+		&Entry{At: now, Method: "GET", Path: "/d", Status: 200}, // no caller
+	)
+
+	got, err := s.List(Filter{Caller: "alice"})
+	require.NoError(t, err)
+	assert.Len(t, got, 2)
+
+	n, err := s.Count(Filter{Caller: "bob"})
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), n)
+
+	names, err := s.DistinctCallers()
+	require.NoError(t, err)
+	assert.Equal(t, []string{"alice", "bob"}, names, "blank callers are not listed")
+}
+
+func TestStore_TopCallers(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now()
+	recordSync(t, s,
+		&Entry{At: now, Method: "GET", Path: "/a", Status: 200, Caller: "heavy", Plan: "MEGA", Duration: 100 * time.Millisecond},
+		&Entry{At: now, Method: "GET", Path: "/a", Status: 200, Caller: "heavy", Plan: "MEGA", Duration: 300 * time.Millisecond},
+		&Entry{At: now, Method: "GET", Path: "/a", Status: 502, Caller: "heavy", Plan: "MEGA", Duration: 200 * time.Millisecond},
+		&Entry{At: now, Method: "GET", Path: "/a", Status: 200, Caller: "light", Plan: "BASIC", Duration: 50 * time.Millisecond},
+		&Entry{At: now, Method: "GET", Path: "/a", Status: 200, Duration: 10 * time.Millisecond}, // gateway bypassed
+	)
+
+	got, err := s.TopCallers(Filter{}, 10)
+	require.NoError(t, err)
+	require.Len(t, got, 3)
+
+	assert.Equal(t, "heavy", got[0].Caller, "busiest first")
+	assert.Equal(t, int64(3), got[0].Count)
+	assert.Equal(t, int64(1), got[0].ErrCount)
+	assert.Equal(t, "MEGA", got[0].Plan)
+	assert.InDelta(t, 200.0, got[0].AvgMS, 0.1)
+
+	// A direct hit that skipped the gateway must be visible, not dropped.
+	var unknown *CallerStat
+	for i := range got {
+		if got[i].Caller == "(unknown)" {
+			unknown = &got[i]
+		}
+	}
+	require.NotNil(t, unknown, "requests without a caller must still be reported")
+	assert.Equal(t, int64(1), unknown.Count)
+}
+
+// ---- redaction completeness --------------------------------------------
+
+// The gap this closes: the shared secret arrives under two names, and only
+// one was on the list, so a working credential was being stored.
+func TestIsSensitiveHeader_CoversAliases(t *testing.T) {
+	for _, name := range []string{
+		"X-RapidAPI-Proxy-Secret",
+		"X-Mashape-Proxy-Secret", // the alias that leaked
+		"X-RapidAPI-Key",
+		"X-Mashape-Key",
+		"Authorization",
+		"Proxy-Authorization",
+		"Cookie",
+		"Set-Cookie",
+		"X-Api-Key",
+		"X-Auth-Token",
+		"X-Session-Id",
+		"X-Some-Future-Secret-Header",
+		"key",
+	} {
+		assert.True(t, isSensitiveHeader(name), "%s must be redacted", name)
+	}
+
+	for _, name := range []string{
+		"X-RapidAPI-User",         // an identifier, and the point of the feature
+		"X-RapidAPI-Subscription", // plan tier
+		"X-RapidAPI-Host",
+		"X-RapidAPI-Version",
+		"X-RapidAPI-Request-Id",
+		"User-Agent",
+		"X-Forwarded-For",
+		"Content-Type",
+		"X-Monkey-Business", // contains "key" but is not a key
+	} {
+		assert.False(t, isSensitiveHeader(name), "%s must NOT be redacted", name)
+	}
+}
+
+func TestMiddleware_RedactsBothSecretAliases(t *testing.T) {
+	s := newTestStore(t, func(c *Config) { c.Capture = CaptureAll })
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) })
+
+	const secret = "f92b54f0-DEAD-BEEF-0000-000000000000"
+	req := httptest.NewRequest("GET", "/x", nil)
+	req.Header.Set("X-RapidAPI-Proxy-Secret", secret)
+	req.Header.Set("X-Mashape-Proxy-Secret", secret)
+	req.Header.Set("X-RapidAPI-Key", "subscriber-key-value")
+	req.Header.Set("X-RapidAPI-User", "visibleUser")
+	serve(t, s, h, req)
+	waitWritten(t, s, 1)
+
+	list, err := s.List(Filter{})
+	require.NoError(t, err)
+	full, err := s.Get(list[0].ID)
+	require.NoError(t, err)
+
+	assert.NotContains(t, full.ReqHeaders, secret,
+		"the shared secret must not be stored under either alias")
+	assert.NotContains(t, full.ReqHeaders, "subscriber-key-value")
+	assert.Equal(t, 3, strings.Count(full.ReqHeaders, "REDACTED"),
+		"all three credential headers redacted")
+	assert.Contains(t, full.ReqHeaders, "visibleUser",
+		"the caller identity is not a secret and stays visible")
+}

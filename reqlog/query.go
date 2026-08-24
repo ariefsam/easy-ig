@@ -16,6 +16,7 @@ type Filter struct {
 	StatusFrom int    // inclusive lower bound, e.g. 400 for "all errors"
 	StatusTo   int    // inclusive upper bound
 	Path       string // exact match
+	Caller     string // exact match on the RapidAPI subscriber
 	Search     string // substring across path, query and error
 	Limit      int
 	Offset     int
@@ -49,6 +50,10 @@ func (f Filter) where() (string, []any) {
 		cond = append(cond, "path = ?")
 		args = append(args, f.Path)
 	}
+	if f.Caller != "" {
+		cond = append(cond, "caller = ?")
+		args = append(args, f.Caller)
+	}
 	if f.Search != "" {
 		// Parameterised LIKE — the term is a value, never concatenated into SQL.
 		cond = append(cond, "(path LIKE ? OR query LIKE ? OR err LIKE ?)")
@@ -70,7 +75,7 @@ func (s *Store) List(f Filter) ([]Entry, error) {
 	where, args := f.where()
 	q := `SELECT id, ts, method, path, query, status, dur_ms, req_bytes,
 	             resp_bytes, ip, user_agent, err, truncated,
-	             body_gz IS NOT NULL
+	             body_gz IS NOT NULL, caller, plan
 	      FROM requests` + where + ` ORDER BY ts DESC, id DESC LIMIT ? OFFSET ?`
 	args = append(args, f.Limit, f.Offset)
 
@@ -86,7 +91,7 @@ func (s *Store) List(f Filter) ([]Entry, error) {
 		var ts, durMS int64
 		if err := rows.Scan(&e.ID, &ts, &e.Method, &e.Path, &e.Query, &e.Status,
 			&durMS, &e.ReqBytes, &e.RespBytes, &e.IP, &e.UserAgent, &e.Err,
-			&e.Truncated, &e.BodyStored); err != nil {
+			&e.Truncated, &e.BodyStored, &e.Caller, &e.Plan); err != nil {
 			return nil, err
 		}
 		e.At = time.UnixMilli(ts)
@@ -116,12 +121,12 @@ func (s *Store) Get(id int64) (*Entry, error) {
 	err := s.db.QueryRow(`
 SELECT id, ts, method, path, query, status, dur_ms, req_bytes, resp_bytes,
        ip, user_agent, err, truncated, body_gz,
-       req_headers, req_body_gz, req_truncated
+       req_headers, req_body_gz, req_truncated, caller, plan
 FROM requests WHERE id = ?`, id).
 		Scan(&e.ID, &ts, &e.Method, &e.Path, &e.Query, &e.Status, &durMS,
 			&e.ReqBytes, &e.RespBytes, &e.IP, &e.UserAgent, &e.Err,
 			&e.Truncated, &bodyGz,
-			&e.ReqHeaders, &reqBodyGz, &e.ReqTruncated)
+			&e.ReqHeaders, &reqBodyGz, &e.ReqTruncated, &e.Caller, &e.Plan)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -168,6 +173,16 @@ type PathStat struct {
 	AvgMS    float64
 	MaxMS    int64
 	ErrCount int64
+}
+
+// CallerStat summarises one API consumer's usage.
+type CallerStat struct {
+	Caller   string
+	Plan     string
+	Count    int64
+	ErrCount int64
+	AvgMS    float64
+	LastSeen time.Time
 }
 
 // DayCount is one point of the requests-per-day series.
@@ -345,4 +360,64 @@ func (s *Store) fileSize() int64 {
 		return 0
 	}
 	return fi.Size()
+}
+
+// TopCallers ranks API consumers by request count.
+//
+// Rows without a caller are grouped under "(unknown)" rather than dropped —
+// a direct hit that bypassed the RapidAPI gateway is worth seeing, not
+// hiding.
+func (s *Store) TopCallers(f Filter, limit int) ([]CallerStat, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	where, args := f.where()
+	args = append(args, limit)
+	rows, err := s.db.Query(`
+SELECT CASE WHEN caller = '' THEN '(unknown)' ELSE caller END AS c,
+       COALESCE(MAX(plan), '') ,
+       COUNT(*) n,
+       COALESCE(SUM(CASE WHEN status >= 400 THEN 1 ELSE 0 END), 0),
+       AVG(dur_ms),
+       MAX(ts)
+FROM requests`+where+` GROUP BY c ORDER BY n DESC LIMIT ?`, args...)
+	if err != nil {
+		return nil, fmt.Errorf("reqlog: top callers: %w", err)
+	}
+	defer rows.Close()
+
+	var out []CallerStat
+	for rows.Next() {
+		var cs CallerStat
+		var avg sql.NullFloat64
+		var last sql.NullInt64
+		if err := rows.Scan(&cs.Caller, &cs.Plan, &cs.Count, &cs.ErrCount, &avg, &last); err != nil {
+			return nil, err
+		}
+		cs.AvgMS = avg.Float64
+		if last.Valid {
+			cs.LastSeen = time.UnixMilli(last.Int64)
+		}
+		out = append(out, cs)
+	}
+	return out, rows.Err()
+}
+
+// DistinctCallers lists known consumers, for the filter dropdown.
+func (s *Store) DistinctCallers() ([]string, error) {
+	rows, err := s.db.Query(
+		`SELECT DISTINCT caller FROM requests WHERE caller != '' ORDER BY caller`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var c string
+		if err := rows.Scan(&c); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
 }

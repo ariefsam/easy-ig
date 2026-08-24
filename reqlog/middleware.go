@@ -65,6 +65,8 @@ func (s *Store) Middleware(next http.Handler) http.Handler {
 			IP:        clientIP(r),
 			UserAgent: r.UserAgent(),
 			Err:       notes.String(),
+			Caller:    callerFrom(r),
+			Plan:      planFrom(r),
 		}
 		if keep && rec.buf != nil {
 			e.Body = rec.buf
@@ -197,16 +199,55 @@ func clientIP(r *http.Request) string {
 	return host
 }
 
-// sensitiveHeaders are never recorded. X-RapidAPI-Proxy-Secret is the shared
-// secret guarding the API, so storing it would put a working credential in
-// the log the dashboard displays.
+// sensitiveHeaders are header names whose values are never recorded.
 var sensitiveHeaders = map[string]bool{
-	"x-rapidapi-proxy-secret": true,
-	"authorization":           true,
-	"cookie":                  true,
-	"set-cookie":              true,
-	"proxy-authorization":     true,
-	"x-api-key":               true,
+	"authorization":       true,
+	"cookie":              true,
+	"set-cookie":          true,
+	"proxy-authorization": true,
+}
+
+// sensitiveHeaderFragments redact any header whose name contains one of
+// these, case-insensitively.
+//
+// An exact-name list was not enough. RapidAPI sends the same shared secret
+// under two names — X-RapidAPI-Proxy-Secret and the legacy
+// X-Mashape-Proxy-Secret — and only the first was listed, so a working
+// credential for this very API was being written to the database and shown
+// on the dashboard. X-RapidAPI-Key, the subscriber's own key, was missed the
+// same way.
+//
+// Matching on fragments means an alias nobody has seen yet is redacted by
+// default. The trade-off is the occasional harmless header being masked,
+// which is the right way round.
+var sensitiveHeaderFragments = []string{
+	"secret",
+	"token",
+	"password",
+	"passwd",
+	"apikey",
+	"api-key",
+	"api_key",
+	"auth",
+	"credential",
+	"session",
+	"signature",
+}
+
+// isSensitiveHeader reports whether a header's value must be withheld.
+func isSensitiveHeader(name string) bool {
+	lower := strings.ToLower(name)
+	if sensitiveHeaders[lower] {
+		return true
+	}
+	for _, frag := range sensitiveHeaderFragments {
+		if strings.Contains(lower, frag) {
+			return true
+		}
+	}
+	// Bare "key" only as a whole word or suffix: matching it as a fragment
+	// would redact X-Monkey-Something and similar.
+	return lower == "key" || strings.HasSuffix(lower, "-key")
 }
 
 // renderHeaders formats request headers one per line, masking the values of
@@ -224,7 +265,7 @@ func renderHeaders(h http.Header) string {
 
 	var b strings.Builder
 	for _, k := range keys {
-		if sensitiveHeaders[strings.ToLower(k)] {
+		if isSensitiveHeader(k) {
 			b.WriteString(k + ": REDACTED\n")
 			continue
 		}
@@ -290,3 +331,31 @@ type readCloser struct {
 }
 
 func (rc readCloser) Close() error { return rc.orig.Close() }
+
+// callerFrom identifies the API consumer.
+//
+// RapidAPI sends the subscriber's username as X-RapidAPI-User, with
+// X-Mashape-User as the legacy alias — checked because the gateway still
+// emits both and a deployment could see either.
+//
+// Unlike the credential headers, this is an identifier rather than a secret,
+// so it is stored: knowing which subscriber drove a request is the point.
+func callerFrom(r *http.Request) string {
+	for _, h := range []string{"X-RapidAPI-User", "X-Mashape-User"} {
+		if v := strings.TrimSpace(r.Header.Get(h)); v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// planFrom returns the subscription tier (BASIC, PRO, MEGA, …), which tells
+// you whether heavy usage is coming from a plan that pays for it.
+func planFrom(r *http.Request) string {
+	for _, h := range []string{"X-RapidAPI-Subscription", "X-Mashape-Subscription"} {
+		if v := strings.TrimSpace(r.Header.Get(h)); v != "" {
+			return v
+		}
+	}
+	return ""
+}
