@@ -44,25 +44,43 @@ const (
 	maxAttempts = 4
 )
 
+// errShellOnly means every attempt on a proxy returned Instagram's generic
+// logged-out shell (no profile data, no not-found page). A profile that exists
+// renders server-side reliably across fresh residential IPs, so when every
+// proxy reports this the account almost certainly does not exist.
+var errShellOnly = errors.New("profilepage: only degraded shell returned")
+
 // GetWebProfile returns a public profile for username. It tries PROXY first and
 // PROXY_FALLBACK next (same env vars as package webprofile).
 //
 // Return contract (matches how UsernameHandler consumes it):
 //   - found:          profile populated, statusCode 200, err nil
-//   - no such user:   statusCode 404, err nil
-//   - blocked/shell:  err != nil (so the caller does NOT cache it and can retry)
+//   - no such user:   statusCode 404, err nil (real not-found page, or only
+//     shells on every proxy — see errShellOnly)
+//   - transient block: err != nil (so the caller does NOT cache it and can retry)
 func GetWebProfile(username string) (profile instagram.Profile, statusCode int, isRestricted bool, err error) {
 	proxies := []string{os.Getenv("PROXY")}
 	if fb := os.Getenv("PROXY_FALLBACK"); fb != "" {
 		proxies = append(proxies, fb)
 	}
 
+	allShell := true
 	for i, p := range proxies {
 		profile, statusCode, isRestricted, err = getViaProxy(username, p)
 		if err == nil {
-			return
+			return // data (200) or a real not-found page (404)
+		}
+		if !errors.Is(err, errShellOnly) {
+			allShell = false
 		}
 		log.Println("profilepage: proxy", i, "failed:", err)
+	}
+	if allShell {
+		// Only the generic shell on every proxy across all retries: the account
+		// almost certainly does not exist. Report 404 so the caller returns
+		// "not exist" and caches it, instead of a retried system error.
+		log.Println("profilepage:", username, "only shells on all proxies — treating as not found")
+		return instagram.Profile{IsExist: "no"}, 404, false, nil
 	}
 	return
 }
@@ -95,6 +113,7 @@ func getViaProxy(username, proxy string) (profile instagram.Profile, statusCode 
 		best           instagram.Profile
 		bestRestricted bool
 		haveBest       bool
+		sawShell       bool
 	)
 	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		body, code, e := doGet(client, profileURL, true)
@@ -132,13 +151,19 @@ func getViaProxy(username, proxy string) (profile instagram.Profile, statusCode 
 			continue
 		}
 		// Degraded shell (no data, not a not-found page) — retry a fresh IP.
+		sawShell = true
 		err = fmt.Errorf("profilepage: degraded shell for %s (attempt %d)", username, attempt)
 	}
 	if haveBest {
 		return best, 200, bestRestricted, nil // embedded data; post count may be 0
 	}
-	// Exhausted retries without a usable page: report an error so the caller
-	// neither caches an empty profile nor reports a false "not found".
+	if sawShell {
+		// Every 200 response was the generic shell. Signal "likely nonexistent"
+		// so GetWebProfile can decide across all proxies.
+		return profile, statusCode, false, errShellOnly
+	}
+	// Only transient network/proxy errors (no page seen at all) — surface them
+	// so the caller does not cache anything and can retry.
 	if err == nil {
 		err = errors.New("profilepage: no usable page for " + username)
 	}
