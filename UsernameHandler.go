@@ -15,7 +15,7 @@ import (
 	"github.com/allegro/bigcache/v3"
 	"gitlab.com/ariefhidayatulloh/easy-ig/apify"
 	"gitlab.com/ariefhidayatulloh/easy-ig/instagram"
-	"gitlab.com/ariefhidayatulloh/easy-ig/webprofile"
+	"gitlab.com/ariefhidayatulloh/easy-ig/profilepage"
 
 	"gitlab.com/ariefhidayatulloh/easy-ig/reqlog"
 )
@@ -285,7 +285,7 @@ func GetWebProfile(username string) (profile instagram.Profile, statusCode int, 
 
 	}
 
-	profile, statusCode, isRestricted, err = webprofile.GetWebProfile(username)
+	profile, statusCode, isRestricted, err = profilepage.GetWebProfile(username)
 	if err != nil {
 		log.Println(err)
 		return
